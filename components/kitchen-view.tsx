@@ -1,10 +1,20 @@
 'use client';
 
+import { useState } from 'react';
 import { BucketListItem } from '@/types/database';
+import { AddDishModal } from './add-dish-modal';
 
 interface KitchenViewProps {
   items: BucketListItem[];
   onItemClick: (item: BucketListItem) => void;
+  onAddItem: (data: DishData) => Promise<void>;
+}
+
+export interface DishData {
+  title: string;
+  cuisine: string | null;
+  difficulty: 'easy' | 'medium' | 'complex' | null;
+  notes: string | null;
 }
 
 // Difficulty configuration
@@ -14,7 +24,9 @@ const difficultyConfig: Record<string, { emoji: string; label: string; color: st
   'complex': { emoji: '🔴', label: 'Complex', color: '#EF4444' },
 };
 
-export function KitchenView({ items, onItemClick }: KitchenViewProps) {
+export function KitchenView({ items, onItemClick, onAddItem }: KitchenViewProps) {
+  const [showAddModal, setShowAddModal] = useState(false);
+
   // Filter for dishes (Food & Drink category with gastronomy_type = 'dish')
   const dishItems = items.filter(item =>
     item.categories.includes('food_drink') &&
@@ -25,12 +37,50 @@ export function KitchenView({ items, onItemClick }: KitchenViewProps) {
   const toMakeItems = dishItems.filter(item => item.status !== 'completed');
   const madeItems = dishItems.filter(item => item.status === 'completed');
 
+  const handleAddDish = async (data: DishData) => {
+    await onAddItem(data);
+    setShowAddModal(false);
+  };
+
   return (
     <div className="space-y-8">
+      {/* Header with Add Button */}
+      <div className="flex items-center justify-between">
+        <h2
+          className="font-serif text-lg font-bold flex items-center gap-2"
+          style={{ color: 'var(--charcoal-brown)' }}
+        >
+          <span>👨‍🍳</span>
+          <span>Kitchen</span>
+        </h2>
+
+        {/* Add Dish Button */}
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #D4AF37 0%, #F59E0B 100%)',
+            color: 'white',
+            boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(212, 175, 55, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(212, 175, 55, 0.3)';
+          }}
+        >
+          <span>+</span>
+          <span>Add Dish</span>
+        </button>
+      </div>
+
       {/* To Make Section */}
       <section>
-        <h2
-          className="font-serif text-lg font-bold mb-4 flex items-center gap-2"
+        <h3
+          className="font-serif text-base font-bold mb-4 flex items-center gap-2"
           style={{ color: 'var(--charcoal-brown)' }}
         >
           <span>📋</span>
@@ -41,11 +91,11 @@ export function KitchenView({ items, onItemClick }: KitchenViewProps) {
           >
             {toMakeItems.length}
           </span>
-        </h2>
+        </h3>
 
         {toMakeItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <span className="text-3xl mb-2">👨‍🍳</span>
+            <span className="text-3xl mb-2">🍳</span>
             <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
               No recipes on your list yet. Add some dishes to cook!
             </p>
@@ -66,8 +116,8 @@ export function KitchenView({ items, onItemClick }: KitchenViewProps) {
       {/* Made Section */}
       {madeItems.length > 0 && (
         <section>
-          <h2
-            className="font-serif text-lg font-bold mb-4 flex items-center gap-2"
+          <h3
+            className="font-serif text-base font-bold mb-4 flex items-center gap-2"
             style={{ color: 'var(--charcoal-brown)' }}
           >
             <span>✅</span>
@@ -78,7 +128,7 @@ export function KitchenView({ items, onItemClick }: KitchenViewProps) {
             >
               {madeItems.length}
             </span>
-          </h2>
+          </h3>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {madeItems.map(item => (
@@ -92,6 +142,13 @@ export function KitchenView({ items, onItemClick }: KitchenViewProps) {
           </div>
         </section>
       )}
+
+      {/* Add Dish Modal */}
+      <AddDishModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdd={handleAddDish}
+      />
     </div>
   );
 }

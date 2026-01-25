@@ -14,8 +14,8 @@ import { LifeView } from './life-view';
 import { CategoryView } from './category-view';
 import { AddItemModal, NewItemData } from './add-item-modal';
 import { GroupedByCategoryView } from './grouped-by-category-view';
-import { RestaurantsView } from './restaurants-view';
-import { KitchenView } from './kitchen-view';
+import { RestaurantsView, RestaurantData } from './restaurants-view';
+import { KitchenView, DishData } from './kitchen-view';
 import {
   getTravelStats,
   getYearStats,
@@ -227,6 +227,86 @@ export function BucketListOptimized() {
     }
   };
 
+  const handleAddRestaurant = async (data: RestaurantData) => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        console.error('No authenticated user');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('bucket_list_items')
+        .insert({
+          title: data.title,
+          categories: ['food_drink'],
+          status: 'idea',
+          location_type: 'sydney',
+          ownership: 'couples',
+          added_by: user.id,
+          is_physical: true,
+          is_priority: false,
+          gastronomy_type: 'restaurant',
+          cuisine: data.cuisine,
+          neighborhood: data.neighborhood,
+          price_level: data.price_level,
+          notes: data.notes,
+        });
+
+      if (error) {
+        console.error('Error adding restaurant:', error);
+        alert('Failed to add restaurant. Please try again.');
+      } else {
+        console.log('Restaurant added successfully');
+        fetchItems();
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      alert('Failed to add restaurant. Please try again.');
+    }
+  };
+
+  const handleAddDish = async (data: DishData) => {
+    try {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        console.error('No authenticated user');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('bucket_list_items')
+        .insert({
+          title: data.title,
+          categories: ['food_drink'],
+          status: 'idea',
+          ownership: 'couples',
+          added_by: user.id,
+          is_physical: false,
+          is_priority: false,
+          gastronomy_type: 'dish',
+          cuisine: data.cuisine,
+          difficulty: data.difficulty,
+          notes: data.notes,
+        });
+
+      if (error) {
+        console.error('Error adding dish:', error);
+        alert('Failed to add dish. Please try again.');
+      } else {
+        console.log('Dish added successfully');
+        fetchItems();
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      alert('Failed to add dish. Please try again.');
+    }
+  };
+
   const handleRegionSelect = (region: string) => {
     if (region === 'sydney' || region === 'australia') {
       setSelectedContinent(region);
@@ -385,11 +465,13 @@ export function BucketListOptimized() {
               <RestaurantsView
                 items={items}
                 onItemClick={handleItemClick}
+                onAddItem={handleAddRestaurant}
               />
             ) : viewMode === 'kitchen' ? (
               <KitchenView
                 items={items}
                 onItemClick={handleItemClick}
+                onAddItem={handleAddDish}
               />
             ) : viewMode === 'in_progress' ? (
               <GroupedByCategoryView

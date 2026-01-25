@@ -2,11 +2,65 @@
 
 import { useState } from 'react';
 import { BucketListItem } from '@/types/database';
+import { AddRestaurantModal } from './add-restaurant-modal';
 
 interface RestaurantsViewProps {
   items: BucketListItem[];
   onItemClick: (item: BucketListItem) => void;
+  onAddItem: (data: RestaurantData) => Promise<void>;
 }
+
+export interface RestaurantData {
+  title: string;
+  cuisine: string | null;
+  neighborhood: string | null;
+  price_level: '$' | '$$' | '$$$' | '$$$$' | null;
+  notes: string | null;
+}
+
+// Sydney region configuration
+const sydneyRegions: Record<string, { label: string; keywords: string[] }> = {
+  'city': {
+    label: 'City / CBD',
+    keywords: ['cbd', 'city', 'sydney cbd', 'circular quay', 'wynyard', 'martin place', 'town hall', 'central', 'haymarket', 'chinatown', 'darling harbour', 'barangaroo', 'the rocks'],
+  },
+  'inner_west': {
+    label: 'Inner West',
+    keywords: ['inner west', 'newtown', 'enmore', 'marrickville', 'petersham', 'leichhardt', 'balmain', 'rozelle', 'annandale', 'glebe', 'camperdown', 'stanmore', 'dulwich hill', 'summer hill', 'ashfield', 'croydon', 'burwood'],
+  },
+  'eastern_suburbs': {
+    label: 'Eastern Suburbs',
+    keywords: ['eastern suburbs', 'bondi', 'coogee', 'bronte', 'tamarama', 'paddington', 'woollahra', 'double bay', 'rose bay', 'vaucluse', 'watsons bay', 'randwick', 'kensington', 'kingsford', 'maroubra', 'clovelly', 'surry hills', 'darlinghurst', 'potts point', 'kings cross', 'elizabeth bay', 'rushcutters bay', 'edgecliff', 'bellevue hill'],
+  },
+  'north_shore': {
+    label: 'North Shore',
+    keywords: ['north shore', 'north sydney', 'neutral bay', 'cremorne', 'mosman', 'chatswood', 'lane cove', 'artarmon', 'st leonards', 'crows nest', 'willoughby', 'castle cove', 'northbridge', 'cammeray', 'waverton', 'wollstonecraft', 'milsons point', 'kirribilli', 'lavender bay'],
+  },
+  'northern_suburbs': {
+    label: 'Northern Suburbs',
+    keywords: ['northern suburbs', 'epping', 'eastwood', 'macquarie park', 'ryde', 'gladesville', 'hunters hill', 'top ryde', 'marsfield', 'north ryde', 'carlingford', 'beecroft', 'cheltenham', 'pennant hills', 'thornleigh', 'normanhurst', 'wahroonga', 'turramurra', 'pymble', 'gordon', 'killara', 'lindfield', 'roseville', 'hornsby'],
+  },
+  'northern_beaches': {
+    label: 'Northern Beaches',
+    keywords: ['northern beaches', 'manly', 'dee why', 'brookvale', 'freshwater', 'curl curl', 'narrabeen', 'mona vale', 'newport', 'avalon', 'palm beach', 'warriewood', 'collaroy', 'cromer', 'beacon hill', 'frenchs forest', 'forestville'],
+  },
+  'south': {
+    label: 'South / St George',
+    keywords: ['south', 'st george', 'hurstville', 'kogarah', 'rockdale', 'arncliffe', 'banksia', 'bexley', 'carlton', 'allawah', 'penshurst', 'mortdale', 'oatley', 'sans souci', 'brighton le sands', 'ramsgate', 'monterey'],
+  },
+  'south_west': {
+    label: 'South West',
+    keywords: ['south west', 'bankstown', 'canterbury', 'campsie', 'lakemba', 'punchbowl', 'belmore', 'strathfield', 'homebush', 'auburn', 'lidcombe', 'berala', 'regents park', 'yagoona', 'bass hill', 'chester hill', 'villawood', 'cabramatta', 'fairfield', 'liverpool'],
+  },
+  'west': {
+    label: 'West / Parramatta',
+    keywords: ['west', 'parramatta', 'westmead', 'harris park', 'granville', 'merrylands', 'guildford', 'chester hill', 'blacktown', 'seven hills', 'baulkham hills', 'castle hill', 'bella vista', 'kellyville', 'rouse hill', 'the hills'],
+  },
+  'other': {
+    label: 'Other / Unspecified',
+    keywords: [],
+  },
+};
 
 // Cuisine color configuration for badges
 const cuisineColors: Record<string, { bg: string; text: string }> = {
@@ -39,8 +93,22 @@ function getCuisineColor(cuisine: string | null): { bg: string; text: string } {
   return cuisineColors[cuisine] || cuisineColors['Other'];
 }
 
-export function RestaurantsView({ items, onItemClick }: RestaurantsViewProps) {
+function getRegionForItem(item: BucketListItem): string {
+  const neighborhood = (item.neighborhood || item.specific_location || '').toLowerCase();
+
+  for (const [regionKey, regionConfig] of Object.entries(sydneyRegions)) {
+    if (regionKey === 'other') continue;
+    if (regionConfig.keywords.some(keyword => neighborhood.includes(keyword))) {
+      return regionKey;
+    }
+  }
+
+  return 'other';
+}
+
+export function RestaurantsView({ items, onItemClick, onAddItem }: RestaurantsViewProps) {
   const [showFavorites, setShowFavorites] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   // Filter for restaurants (Food & Drink category with gastronomy_type = 'restaurant')
   const restaurantItems = items.filter(item =>
@@ -53,10 +121,31 @@ export function RestaurantsView({ items, onItemClick }: RestaurantsViewProps) {
     ? restaurantItems.filter(item => item.status === 'completed')
     : restaurantItems.filter(item => item.status !== 'completed');
 
+  // Group items by region
+  const groupedItems = displayedItems.reduce((acc, item) => {
+    const region = getRegionForItem(item);
+    if (!acc[region]) acc[region] = [];
+    acc[region].push(item);
+    return acc;
+  }, {} as Record<string, BucketListItem[]>);
+
+  // Sort regions by number of items (descending), but keep 'other' at the end
+  const sortedRegions = Object.keys(groupedItems).sort((a, b) => {
+    if (a === 'other') return 1;
+    if (b === 'other') return -1;
+    return groupedItems[b].length - groupedItems[a].length;
+  });
+
+  const handleAddRestaurant = async (data: RestaurantData) => {
+    await onAddItem(data);
+    setShowAddModal(false);
+  };
+
   return (
     <div className="space-y-6">
-      {/* Toggle Pills */}
-      <div className="flex justify-center">
+      {/* Header with Toggle and Add Button */}
+      <div className="flex items-center justify-between">
+        {/* Toggle Pills */}
         <div
           className="inline-flex rounded-full p-1"
           style={{
@@ -86,29 +175,83 @@ export function RestaurantsView({ items, onItemClick }: RestaurantsViewProps) {
             Favorites
           </button>
         </div>
+
+        {/* Add Restaurant Button */}
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
+          style={{
+            background: 'linear-gradient(135deg, #D4AF37 0%, #F59E0B 100%)',
+            color: 'white',
+            boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-1px)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(212, 175, 55, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(212, 175, 55, 0.3)';
+          }}
+        >
+          <span>+</span>
+          <span>Add Restaurant</span>
+        </button>
       </div>
 
-      {/* Masonry Grid of Matchbook Cards */}
+      {/* Grouped Restaurant Cards */}
       {displayedItems.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <span className="text-4xl mb-3">🍽️</span>
           <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
             {showFavorites
               ? "No favorite restaurants yet. Mark restaurants as completed to add them here!"
-              : "No restaurants to visit. Add some from the + button above!"}
+              : "No restaurants to visit. Add some using the button above!"}
           </p>
         </div>
       ) : (
-        <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-4">
-          {displayedItems.map(item => (
-            <MatchbookCard
-              key={item.id}
-              item={item}
-              onClick={() => onItemClick(item)}
-            />
-          ))}
+        <div className="space-y-8">
+          {sortedRegions.map(regionKey => {
+            const regionConfig = sydneyRegions[regionKey];
+            const regionItems = groupedItems[regionKey];
+
+            return (
+              <section key={regionKey}>
+                <h2
+                  className="font-serif text-lg font-bold mb-4 flex items-center gap-2"
+                  style={{ color: 'var(--charcoal-brown)' }}
+                >
+                  <span>📍</span>
+                  <span>{regionConfig.label}</span>
+                  <span
+                    className="text-sm font-normal px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(253, 230, 138, 0.3)', color: 'var(--text-muted)' }}
+                  >
+                    {regionItems.length}
+                  </span>
+                </h2>
+
+                <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-4">
+                  {regionItems.map(item => (
+                    <MatchbookCard
+                      key={item.id}
+                      item={item}
+                      onClick={() => onItemClick(item)}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
         </div>
       )}
+
+      {/* Add Restaurant Modal */}
+      <AddRestaurantModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdd={handleAddRestaurant}
+      />
     </div>
   );
 }
@@ -128,7 +271,7 @@ function MatchbookCard({
       onClick={onClick}
     >
       <div
-        className="rounded-lg overflow-hidden transition-all duration-200 group-hover:shadow-lg group-hover:-translate-y-0.5"
+        className="rounded-lg overflow-hidden transition-all duration-200 group-hover:shadow-lg group-hover:-translate-y-0.5 relative"
         style={{
           background: '#FDF8F0', // Cream/matchbook color
           border: '1px solid rgba(139, 123, 114, 0.2)',
