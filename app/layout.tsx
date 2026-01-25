@@ -15,9 +15,19 @@ const nunito = Nunito({
 });
 
 export const metadata: Metadata = {
-  title: "Horizon - Life Architecture",
+  title: "Horizon",
   description: "Shared bucket list and life planning for couples",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/icons/icon.svg', type: 'image/svg+xml' },
+    ],
+    apple: [
+      { url: '/apple-icon.png' },
+      { url: '/icons/apple-icon.png', sizes: '180x180' },
+    ],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -41,15 +51,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Favicon */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
+
         {/* iOS PWA Meta Tags */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Horizon" />
-        <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192.png" />
-        <link rel="icon" type="image/svg+xml" href="/icons/icon.svg" />
-        {/* Splash screens for iOS */}
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-icon.png" />
+        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
       </head>
       <body
         className={`${merriweather.variable} ${nunito.variable} antialiased`}
