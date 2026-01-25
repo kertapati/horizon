@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Word temp files
+~$*
+
+# Local documentation (optional - remove if you want to commit these)
+*.docx

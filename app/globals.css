@@ -1,26 +1,264 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Golden Storybook Color Palette */
+  --paper-cream: #F9F8F4;
+  --apricot: #FFD1B3;
+  --pale-gold: #FDE68A;
+  --gold-leaf: #D4AF37;
+  --charcoal-brown: #2C2420;
+
+  /* Pastel Watercolors */
+  --sage: #B8C5B8;
+  --dusty-blue: #A8B5C8;
+  --terracotta: #D4A797;
+  --blush: #F4D4D4;
+  --lavender: #D4C8E0;
+  --mint: #C8E0D4;
+
+  /* UI Colors */
+  --card-white: #FFFFFF;
+  --text-primary: var(--charcoal-brown);
+  --text-secondary: #5A4A42;
+  --text-muted: #8B7B72;
+
+  /* Warm Shadows */
+  --shadow-warm: 0 4px 20px -2px rgba(180, 100, 50, 0.1);
+  --shadow-warm-md: 0 6px 24px -3px rgba(180, 100, 50, 0.12);
+  --shadow-warm-lg: 0 10px 30px -5px rgba(180, 100, 50, 0.15);
+
+  /* Fonts */
+  --font-serif: 'Merriweather', serif;
+  --font-sans: 'Nunito', system-ui, -apple-system, sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  box-sizing: border-box;
+}
+
+/* Paper Texture Overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.5;
+}
+
+/* Golden Hour Glow Gradients */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(circle at 85% 15%, var(--apricot) 0%, transparent 40%),
+    radial-gradient(circle at 15% 85%, var(--pale-gold) 0%, transparent 40%);
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(80px);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper-cream);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  position: relative;
+}
+
+/* All content above the background layers */
+body > * {
+  position: relative;
+  z-index: 2;
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6, .font-serif {
+  font-family: var(--font-serif);
+  color: var(--charcoal-brown);
+  font-weight: 700;
+}
+
+/* Smooth transitions for interactive elements */
+button, a, input, textarea, select {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Focus styles with golden accent */
+*:focus-visible {
+  outline: 2px solid var(--gold-leaf);
+  outline-offset: 2px;
+}
+
+/* Custom scrollbar with warm tones */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(249, 248, 244, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 123, 114, 0.3);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 123, 114, 0.5);
+  background-clip: content-box;
+}
+
+/* Checkbox - Hand-drawn style with gold fill */
+input[type="checkbox"] {
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--charcoal-brown);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  background: var(--card-white);
+  transition: all 0.2s ease;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--gold-leaf);
+  border-color: var(--gold-leaf);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.3s ease-out;
+}
+
+/* Watercolor Badge Styles */
+.badge-sage {
+  background: rgba(184, 197, 184, 0.3);
+  color: #3A4A3A;
+}
+
+.badge-dusty-blue {
+  background: rgba(168, 181, 200, 0.3);
+  color: #2A3A4A;
+}
+
+.badge-terracotta {
+  background: rgba(212, 167, 151, 0.3);
+  color: #5A3A2A;
+}
+
+.badge-blush {
+  background: rgba(244, 212, 212, 0.3);
+  color: #6A3A3A;
+}
+
+.badge-lavender {
+  background: rgba(212, 200, 224, 0.3);
+  color: #4A3A5A;
+}
+
+.badge-mint {
+  background: rgba(200, 224, 212, 0.3);
+  color: #2A4A3A;
+}
+
+.badge-apricot {
+  background: rgba(255, 209, 179, 0.3);
+  color: #6A4A2A;
+}
+
+.badge-pale-gold {
+  background: rgba(253, 230, 138, 0.3);
+  color: #5A4A1A;
+}
+
+/* Glassy/Translucent Effect */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Highlighter Wash for Active States */
+.highlighter-active {
+  background: rgba(253, 230, 138, 0.2);
+  border-left: 3px solid var(--pale-gold);
+}
+
+/* Warm Card Shadow */
+.card-warm {
+  background: var(--card-white);
+  box-shadow: var(--shadow-warm);
+  border-radius: 16px;
+}
+
+.card-warm-hover:hover {
+  box-shadow: var(--shadow-warm-md);
+  transform: translateY(-2px);
 }
