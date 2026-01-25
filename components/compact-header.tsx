@@ -14,6 +14,8 @@ interface CompactHeaderProps {
   onDensityChange: (density: Density) => void;
   onSearch?: (query: string) => void;
   onAdd?: () => void;
+  hideAddButton?: boolean;
+  hideDensityToggle?: boolean;
 }
 
 export function CompactHeader({
@@ -26,6 +28,8 @@ export function CompactHeader({
   onDensityChange,
   onSearch,
   onAdd,
+  hideAddButton = false,
+  hideDensityToggle = false,
 }: CompactHeaderProps) {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -81,46 +85,50 @@ export function CompactHeader({
         </div>
 
         {/* Density toggle */}
-        <div className="hidden sm:flex items-center gap-1 rounded-md border border-gray-300 p-0.5">
-          <DensityButton
-            active={density === 'compact'}
-            onClick={() => onDensityChange('compact')}
-            icon={
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            }
-            title="Compact list"
-          />
-          <DensityButton
-            active={density === 'comfortable'}
-            onClick={() => onDensityChange('comfortable')}
-            icon={
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-              </svg>
-            }
-            title="Grid view"
-          />
-          <DensityButton
-            active={density === 'table'}
-            onClick={() => onDensityChange('table')}
-            icon={
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-            }
-            title="Table view"
-          />
-        </div>
+        {!hideDensityToggle && (
+          <div className="hidden sm:flex items-center gap-1 rounded-md border border-gray-300 p-0.5">
+            <DensityButton
+              active={density === 'compact'}
+              onClick={() => onDensityChange('compact')}
+              icon={
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              }
+              title="Compact list"
+            />
+            <DensityButton
+              active={density === 'comfortable'}
+              onClick={() => onDensityChange('comfortable')}
+              icon={
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              }
+              title="Grid view"
+            />
+            <DensityButton
+              active={density === 'table'}
+              onClick={() => onDensityChange('table')}
+              icon={
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              }
+              title="Table view"
+            />
+          </div>
+        )}
 
         {/* Add button */}
-        <button
-          onClick={onAdd}
-          className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        >
-          + Add
-        </button>
+        {!hideAddButton && (
+          <button
+            onClick={onAdd}
+            className="rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            + Add
+          </button>
+        )}
       </div>
     </header>
   );

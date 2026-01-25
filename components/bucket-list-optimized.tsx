@@ -14,8 +14,8 @@ import { LifeView } from './life-view';
 import { CategoryView } from './category-view';
 import { AddItemModal, NewItemData } from './add-item-modal';
 import { GroupedByCategoryView } from './grouped-by-category-view';
-import { RestaurantsView, RestaurantData } from './restaurants-view';
-import { KitchenView, DishData } from './kitchen-view';
+import { RestaurantsView } from './restaurants-view';
+import { KitchenView } from './kitchen-view';
 import { YearManifesto } from './year-manifesto';
 import {
   getTravelStats,
@@ -232,98 +232,6 @@ export function BucketListOptimized() {
     }
   };
 
-  const handleAddRestaurant = async (data: RestaurantData) => {
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        console.error('No authenticated user');
-        return;
-      }
-
-      // Build insert data with core fields
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const insertData: Record<string, any> = {
-        title: data.title,
-        categories: ['food_drink'],
-        status: 'idea',
-        location_type: 'sydney',
-        ownership: 'couples',
-        added_by: user.id,
-        is_physical: true,
-        is_priority: false,
-      };
-
-      // Add gastronomy fields if DB supports them
-      if (data.cuisine) insertData.cuisine = data.cuisine;
-      if (data.neighborhood) insertData.neighborhood = data.neighborhood;
-      if (data.price_level) insertData.price_level = data.price_level;
-      if (data.notes) insertData.notes = data.notes;
-      insertData.gastronomy_type = 'restaurant';
-
-      const { error } = await supabase
-        .from('bucket_list_items')
-        .insert(insertData);
-
-      if (error) {
-        console.error('Error adding restaurant:', error);
-        alert(`Failed to add restaurant: ${error.message}`);
-      } else {
-        console.log('Restaurant added successfully');
-        fetchItems();
-      }
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      alert('Failed to add restaurant. Please try again.');
-    }
-  };
-
-  const handleAddDish = async (data: DishData) => {
-    try {
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        console.error('No authenticated user');
-        return;
-      }
-
-      // Build insert data with core fields
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const insertData: Record<string, any> = {
-        title: data.title,
-        categories: ['food_drink'],
-        status: 'idea',
-        ownership: 'couples',
-        added_by: user.id,
-        is_physical: false,
-        is_priority: false,
-      };
-
-      // Add gastronomy fields if DB supports them
-      if (data.cuisine) insertData.cuisine = data.cuisine;
-      if (data.difficulty) insertData.difficulty = data.difficulty;
-      if (data.notes) insertData.notes = data.notes;
-      insertData.gastronomy_type = 'dish';
-
-      const { error } = await supabase
-        .from('bucket_list_items')
-        .insert(insertData);
-
-      if (error) {
-        console.error('Error adding dish:', error);
-        alert(`Failed to add dish: ${error.message}`);
-      } else {
-        console.log('Dish added successfully');
-        fetchItems();
-      }
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      alert('Failed to add dish. Please try again.');
-    }
-  };
-
   const handleRegionSelect = (region: string) => {
     if (region === 'sydney' || region === 'australia') {
       setSelectedContinent(region);
@@ -344,7 +252,7 @@ export function BucketListOptimized() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden flex flex-col">
-        {/* Compact Header */}
+        {/* Compact Header - hide add button and density for gastronomy views */}
         <CompactHeader
           title={getViewTitle()}
           itemCount={filteredItems.length}
@@ -355,6 +263,8 @@ export function BucketListOptimized() {
           onDensityChange={setDensity}
           onSearch={setSearchQuery}
           onAdd={handleAddItem}
+          hideAddButton={viewMode === 'restaurants' || viewMode === 'kitchen'}
+          hideDensityToggle={viewMode === 'restaurants' || viewMode === 'kitchen'}
         />
 
         {/* Content Area */}
@@ -488,19 +398,22 @@ export function BucketListOptimized() {
             ) : viewMode === 'restaurants' ? (
               <RestaurantsView
                 items={items}
-                onItemClick={handleItemClick}
-                onAddItem={handleAddRestaurant}
                 onItemUpdate={(updatedItem) => {
                   setItems(prev => prev.map(item =>
                     item.id === updatedItem.id ? updatedItem : item
                   ));
                 }}
+                onRefresh={fetchItems}
               />
             ) : viewMode === 'kitchen' ? (
               <KitchenView
                 items={items}
-                onItemClick={handleItemClick}
-                onAddItem={handleAddDish}
+                onItemUpdate={(updatedItem) => {
+                  setItems(prev => prev.map(item =>
+                    item.id === updatedItem.id ? updatedItem : item
+                  ));
+                }}
+                onRefresh={fetchItems}
               />
             ) : viewMode === 'in_progress' ? (
               <GroupedByCategoryView
@@ -547,12 +460,15 @@ export function BucketListOptimized() {
       </div>
 
       {/* Detail Panel */}
-      <DetailPanel
-        item={selectedItem}
-        isOpen={selectedItem !== null}
-        onClose={() => setSelectedItem(null)}
-        onUpdate={fetchItems}
-      />
+      {/* Detail Panel - hidden for gastronomy views (they have inline editing) */}
+      {viewMode !== 'restaurants' && viewMode !== 'kitchen' && (
+        <DetailPanel
+          item={selectedItem}
+          isOpen={selectedItem !== null}
+          onClose={() => setSelectedItem(null)}
+          onUpdate={fetchItems}
+        />
+      )}
 
       {/* Add Item Modal */}
       <AddItemModal
