@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { BucketListItem } from '@/types/database';
 import { AddRestaurantModal } from './add-restaurant-modal';
+import { createClient } from '@/lib/supabase/client';
 
 interface RestaurantsViewProps {
   items: BucketListItem[];
   onItemClick: (item: BucketListItem) => void;
   onAddItem: (data: RestaurantData) => Promise<void>;
+  onItemUpdate?: (item: BucketListItem) => void;
 }
 
 export interface RestaurantData {
@@ -21,7 +23,7 @@ export interface RestaurantData {
 // Sydney region configuration
 const sydneyRegions: Record<string, { label: string; keywords: string[] }> = {
   'city': {
-    label: 'City / CBD',
+    label: 'CBD',
     keywords: ['cbd', 'city', 'sydney cbd', 'circular quay', 'wynyard', 'martin place', 'town hall', 'central', 'haymarket', 'chinatown', 'darling harbour', 'barangaroo', 'the rocks'],
   },
   'inner_west': {
@@ -29,7 +31,7 @@ const sydneyRegions: Record<string, { label: string; keywords: string[] }> = {
     keywords: ['inner west', 'newtown', 'enmore', 'marrickville', 'petersham', 'leichhardt', 'balmain', 'rozelle', 'annandale', 'glebe', 'camperdown', 'stanmore', 'dulwich hill', 'summer hill', 'ashfield', 'croydon', 'burwood'],
   },
   'eastern_suburbs': {
-    label: 'Eastern Suburbs',
+    label: 'East',
     keywords: ['eastern suburbs', 'bondi', 'coogee', 'bronte', 'tamarama', 'paddington', 'woollahra', 'double bay', 'rose bay', 'vaucluse', 'watsons bay', 'randwick', 'kensington', 'kingsford', 'maroubra', 'clovelly', 'surry hills', 'darlinghurst', 'potts point', 'kings cross', 'elizabeth bay', 'rushcutters bay', 'edgecliff', 'bellevue hill'],
   },
   'north_shore': {
@@ -37,27 +39,27 @@ const sydneyRegions: Record<string, { label: string; keywords: string[] }> = {
     keywords: ['north shore', 'north sydney', 'neutral bay', 'cremorne', 'mosman', 'chatswood', 'lane cove', 'artarmon', 'st leonards', 'crows nest', 'willoughby', 'castle cove', 'northbridge', 'cammeray', 'waverton', 'wollstonecraft', 'milsons point', 'kirribilli', 'lavender bay'],
   },
   'northern_suburbs': {
-    label: 'Northern Suburbs',
+    label: 'North',
     keywords: ['northern suburbs', 'epping', 'eastwood', 'macquarie park', 'ryde', 'gladesville', 'hunters hill', 'top ryde', 'marsfield', 'north ryde', 'carlingford', 'beecroft', 'cheltenham', 'pennant hills', 'thornleigh', 'normanhurst', 'wahroonga', 'turramurra', 'pymble', 'gordon', 'killara', 'lindfield', 'roseville', 'hornsby'],
   },
   'northern_beaches': {
-    label: 'Northern Beaches',
+    label: 'Beaches',
     keywords: ['northern beaches', 'manly', 'dee why', 'brookvale', 'freshwater', 'curl curl', 'narrabeen', 'mona vale', 'newport', 'avalon', 'palm beach', 'warriewood', 'collaroy', 'cromer', 'beacon hill', 'frenchs forest', 'forestville'],
   },
   'south': {
-    label: 'South / St George',
+    label: 'South',
     keywords: ['south', 'st george', 'hurstville', 'kogarah', 'rockdale', 'arncliffe', 'banksia', 'bexley', 'carlton', 'allawah', 'penshurst', 'mortdale', 'oatley', 'sans souci', 'brighton le sands', 'ramsgate', 'monterey'],
   },
   'south_west': {
-    label: 'South West',
+    label: 'SW',
     keywords: ['south west', 'bankstown', 'canterbury', 'campsie', 'lakemba', 'punchbowl', 'belmore', 'strathfield', 'homebush', 'auburn', 'lidcombe', 'berala', 'regents park', 'yagoona', 'bass hill', 'chester hill', 'villawood', 'cabramatta', 'fairfield', 'liverpool'],
   },
   'west': {
-    label: 'West / Parramatta',
+    label: 'West',
     keywords: ['west', 'parramatta', 'westmead', 'harris park', 'granville', 'merrylands', 'guildford', 'chester hill', 'blacktown', 'seven hills', 'baulkham hills', 'castle hill', 'bella vista', 'kellyville', 'rouse hill', 'the hills'],
   },
   'other': {
-    label: 'Other / Unspecified',
+    label: 'Other',
     keywords: [],
   },
 };
@@ -81,6 +83,7 @@ const cuisineColors: Record<string, { bg: string; text: string }> = {
   'Australian Modern': { bg: 'rgba(34, 197, 94, 0.15)', text: '#15803D' },
   'Fusion': { bg: 'rgba(168, 85, 247, 0.15)', text: '#7C3AED' },
   'Seafood': { bg: 'rgba(59, 130, 246, 0.15)', text: '#1D4ED8' },
+  'Steakhouse': { bg: 'rgba(139, 69, 19, 0.2)', text: '#8B4513' },
   'Vegetarian': { bg: 'rgba(34, 197, 94, 0.15)', text: '#15803D' },
   'Bakery': { bg: 'rgba(234, 179, 8, 0.15)', text: '#A16207' },
   'Cafe': { bg: 'rgba(139, 92, 42, 0.15)', text: '#78350F' },
@@ -94,6 +97,11 @@ function getCuisineColor(cuisine: string | null): { bg: string; text: string } {
 }
 
 function getRegionForItem(item: BucketListItem): string {
+  // First check if region is already set
+  if (item.region && sydneyRegions[item.region]) {
+    return item.region;
+  }
+
   const neighborhood = (item.neighborhood || item.specific_location || '').toLowerCase();
 
   for (const [regionKey, regionConfig] of Object.entries(sydneyRegions)) {
@@ -106,55 +114,80 @@ function getRegionForItem(item: BucketListItem): string {
   return 'other';
 }
 
-export function RestaurantsView({ items, onItemClick, onAddItem }: RestaurantsViewProps) {
+function getRegionLabel(regionKey: string): string {
+  return sydneyRegions[regionKey]?.label || 'Other';
+}
+
+export function RestaurantsView({ items, onItemClick, onAddItem, onItemUpdate }: RestaurantsViewProps) {
   const [showFavorites, setShowFavorites] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [optimisticUpdates, setOptimisticUpdates] = useState<Record<string, boolean>>({});
 
-  // Filter for restaurants (Food & Drink category with gastronomy_type = 'restaurant')
+  // Filter for restaurants (Food & Drink category with gastronomy_type = 'restaurant' or null for legacy)
   const restaurantItems = items.filter(item =>
     item.categories.includes('food_drink') &&
-    item.gastronomy_type === 'restaurant'
+    (item.gastronomy_type === 'restaurant' || item.gastronomy_type === null)
   );
 
-  // Filter by toggle: favorites = completed (checked), to visit = not completed
+  // Filter by toggle: favorites = is_priority, to visit = not priority
   const displayedItems = showFavorites
-    ? restaurantItems.filter(item => item.status === 'completed')
+    ? restaurantItems.filter(item => {
+        const isFavorite = optimisticUpdates[item.id] ?? item.is_priority;
+        return isFavorite;
+      })
     : restaurantItems.filter(item => item.status !== 'completed');
 
-  // Group items by region
-  const groupedItems = displayedItems.reduce((acc, item) => {
-    const region = getRegionForItem(item);
-    if (!acc[region]) acc[region] = [];
-    acc[region].push(item);
-    return acc;
-  }, {} as Record<string, BucketListItem[]>);
-
-  // Sort regions by number of items (descending), but keep 'other' at the end
-  const sortedRegions = Object.keys(groupedItems).sort((a, b) => {
-    if (a === 'other') return 1;
-    if (b === 'other') return -1;
-    return groupedItems[b].length - groupedItems[a].length;
-  });
+  // Sort alphabetically by title for a clean masonry flow
+  const sortedItems = [...displayedItems].sort((a, b) => a.title.localeCompare(b.title));
 
   const handleAddRestaurant = async (data: RestaurantData) => {
     await onAddItem(data);
     setShowAddModal(false);
   };
 
+  const handleToggleFavorite = useCallback(async (item: BucketListItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    const currentFavorite = optimisticUpdates[item.id] ?? item.is_priority;
+    const newFavorite = !currentFavorite;
+
+    // Optimistic update
+    setOptimisticUpdates(prev => ({ ...prev, [item.id]: newFavorite }));
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('bucket_list_items')
+        .update({ is_priority: newFavorite })
+        .eq('id', item.id);
+
+      if (error) {
+        console.error('Error updating favorite:', error);
+        // Revert optimistic update
+        setOptimisticUpdates(prev => ({ ...prev, [item.id]: currentFavorite }));
+      } else if (onItemUpdate) {
+        onItemUpdate({ ...item, is_priority: newFavorite });
+      }
+    } catch (err) {
+      console.error('Error toggling favorite:', err);
+      setOptimisticUpdates(prev => ({ ...prev, [item.id]: currentFavorite }));
+    }
+  }, [optimisticUpdates, onItemUpdate]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header with Toggle and Add Button */}
       <div className="flex items-center justify-between">
         {/* Toggle Pills */}
         <div
-          className="inline-flex rounded-full p-1"
+          className="inline-flex rounded-full p-0.5"
           style={{
             background: 'rgba(139, 123, 114, 0.1)',
           }}
         >
           <button
             onClick={() => setShowFavorites(false)}
-            className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all"
+            className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
             style={{
               background: !showFavorites ? 'var(--paper-cream)' : 'transparent',
               color: !showFavorites ? 'var(--charcoal-brown)' : 'var(--text-muted)',
@@ -165,33 +198,25 @@ export function RestaurantsView({ items, onItemClick, onAddItem }: RestaurantsVi
           </button>
           <button
             onClick={() => setShowFavorites(true)}
-            className="px-4 py-1.5 rounded-full text-sm font-semibold transition-all"
+            className="px-3 py-1 rounded-full text-xs font-semibold transition-all"
             style={{
               background: showFavorites ? 'var(--paper-cream)' : 'transparent',
               color: showFavorites ? 'var(--charcoal-brown)' : 'var(--text-muted)',
               boxShadow: showFavorites ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             }}
           >
-            Favorites
+            ❤️ Favorites
           </button>
         </div>
 
         {/* Add Restaurant Button */}
         <button
           onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
           style={{
             background: 'linear-gradient(135deg, #D4AF37 0%, #F59E0B 100%)',
             color: 'white',
-            boxShadow: '0 2px 8px rgba(212, 175, 55, 0.3)',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 4px 12px rgba(212, 175, 55, 0.4)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(212, 175, 55, 0.3)';
+            boxShadow: '0 2px 6px rgba(212, 175, 55, 0.3)',
           }}
         >
           <span>+</span>
@@ -199,50 +224,27 @@ export function RestaurantsView({ items, onItemClick, onAddItem }: RestaurantsVi
         </button>
       </div>
 
-      {/* Grouped Restaurant Cards */}
+      {/* Dense Masonry Grid - No Region Headers */}
       {displayedItems.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <span className="text-4xl mb-3">🍽️</span>
-          <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>
+        <div className="flex flex-col items-center justify-center py-8 text-center">
+          <span className="text-3xl mb-2">🍽️</span>
+          <p className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
             {showFavorites
-              ? "No favorite restaurants yet. Mark restaurants as completed to add them here!"
+              ? "No favorites yet. Click the heart on any restaurant!"
               : "No restaurants to visit. Add some using the button above!"}
           </p>
         </div>
       ) : (
-        <div className="space-y-8">
-          {sortedRegions.map(regionKey => {
-            const regionConfig = sydneyRegions[regionKey];
-            const regionItems = groupedItems[regionKey];
-
-            return (
-              <section key={regionKey}>
-                <h2
-                  className="font-serif text-lg font-bold mb-4 flex items-center gap-2"
-                  style={{ color: 'var(--charcoal-brown)' }}
-                >
-                  <span>📍</span>
-                  <span>{regionConfig.label}</span>
-                  <span
-                    className="text-sm font-normal px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(253, 230, 138, 0.3)', color: 'var(--text-muted)' }}
-                  >
-                    {regionItems.length}
-                  </span>
-                </h2>
-
-                <div className="columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-4">
-                  {regionItems.map(item => (
-                    <MatchbookCard
-                      key={item.id}
-                      item={item}
-                      onClick={() => onItemClick(item)}
-                    />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+        <div className="columns-1 sm:columns-2 lg:columns-3 xl:columns-4 2xl:columns-5 gap-3">
+          {sortedItems.map(item => (
+            <CompactCard
+              key={item.id}
+              item={item}
+              isFavorite={optimisticUpdates[item.id] ?? item.is_priority}
+              onClick={() => onItemClick(item)}
+              onToggleFavorite={(e) => handleToggleFavorite(item, e)}
+            />
+          ))}
         </div>
       )}
 
@@ -256,120 +258,103 @@ export function RestaurantsView({ items, onItemClick, onAddItem }: RestaurantsVi
   );
 }
 
-function MatchbookCard({
+function CompactCard({
   item,
+  isFavorite,
   onClick,
+  onToggleFavorite,
 }: {
   item: BucketListItem;
+  isFavorite: boolean;
   onClick: () => void;
+  onToggleFavorite: (e: React.MouseEvent) => void;
 }) {
   const cuisineColor = getCuisineColor(item.cuisine);
+  const regionKey = getRegionForItem(item);
+  const regionLabel = getRegionLabel(regionKey);
+  const neighborhood = item.neighborhood || item.specific_location;
 
   return (
     <div
-      className="break-inside-avoid mb-4 cursor-pointer group"
+      className="break-inside-avoid mb-2 cursor-pointer group"
       onClick={onClick}
     >
       <div
-        className="rounded-lg overflow-hidden transition-all duration-200 group-hover:shadow-lg group-hover:-translate-y-0.5 relative"
+        className="rounded-md overflow-hidden transition-all duration-150 group-hover:shadow-md relative"
         style={{
-          background: '#FDF8F0', // Cream/matchbook color
-          border: '1px solid rgba(139, 123, 114, 0.2)',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+          background: '#FDFBF7',
+          border: '1px solid rgba(139, 123, 114, 0.15)',
         }}
       >
-        {/* Top decorative stripe */}
+        {/* Colored top stripe */}
         <div
-          className="h-1.5"
-          style={{
-            background: cuisineColor.bg,
-            borderBottom: `2px solid ${cuisineColor.text}`,
-          }}
+          className="h-0.5"
+          style={{ background: cuisineColor.text }}
         />
 
-        {/* Card Content */}
-        <div className="p-3">
-          {/* Restaurant Name - Serif typography */}
-          <h3
-            className="font-serif text-base font-bold leading-tight mb-2"
-            style={{ color: 'var(--charcoal-brown)' }}
-          >
-            {item.title}
-          </h3>
-
-          {/* Cuisine Badge */}
-          {item.cuisine && (
-            <span
-              className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold mb-2"
-              style={{
-                background: cuisineColor.bg,
-                color: cuisineColor.text,
-              }}
+        {/* Card Content - Compact */}
+        <div className="px-2 py-1.5">
+          {/* Top row: Title + Heart */}
+          <div className="flex items-start justify-between gap-1">
+            <h3
+              className="text-sm font-semibold leading-tight flex-1"
+              style={{ color: 'var(--charcoal-brown)' }}
             >
-              {item.cuisine}
-            </span>
-          )}
+              {item.title}
+            </h3>
 
-          {/* Location/Neighborhood */}
-          {(item.neighborhood || item.specific_location) && (
+            {/* Favorite Heart Button */}
+            <button
+              onClick={onToggleFavorite}
+              className="flex-shrink-0 p-0.5 transition-transform hover:scale-110"
+              title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              {isFavorite ? (
+                <svg className="w-4 h-4 text-red-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+              ) : (
+                <svg className="w-4 h-4 text-gray-300 group-hover:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
+                </svg>
+              )}
+            </button>
+          </div>
+
+          {/* Meta row: Cuisine badge + Location/Region */}
+          <div className="flex items-center gap-1 mt-1 flex-wrap">
+            {item.cuisine && (
+              <span
+                className="inline-block px-1.5 py-0.5 rounded text-[10px] font-medium"
+                style={{
+                  background: cuisineColor.bg,
+                  color: cuisineColor.text,
+                }}
+              >
+                {item.cuisine}
+              </span>
+            )}
+            {item.price_level && (
+              <span
+                className="text-[10px] font-medium"
+                style={{ color: 'var(--text-muted)' }}
+              >
+                {item.price_level}
+              </span>
+            )}
+          </div>
+
+          {/* Location line: Neighborhood • Region */}
+          {(neighborhood || regionKey !== 'other') && (
             <p
-              className="text-xs mb-2 flex items-center gap-1"
+              className="text-[10px] mt-1 truncate"
               style={{ color: 'var(--text-muted)' }}
             >
-              <span>📍</span>
-              <span>{item.neighborhood || item.specific_location}</span>
+              {neighborhood && <span>{neighborhood}</span>}
+              {neighborhood && regionKey !== 'other' && <span> · </span>}
+              {regionKey !== 'other' && <span>{regionLabel}</span>}
             </p>
           )}
-
-          {/* Price Level */}
-          {item.price_level && (
-            <p
-              className="text-xs font-semibold"
-              style={{ color: 'var(--text-secondary)' }}
-            >
-              {item.price_level}
-            </p>
-          )}
-
-          {/* Quick Link Icon - Opens notes/details */}
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick();
-            }}
-            className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-full"
-            style={{
-              background: 'rgba(255,255,255,0.9)',
-              color: 'var(--charcoal-brown)',
-            }}
-            title="View details & notes"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Bottom decorative element - matchbook style */}
-        <div
-          className="h-4 relative overflow-hidden"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(139, 123, 114, 0.05), rgba(139, 123, 114, 0.1))',
-          }}
-        >
-          {/* Matchbook strike strip pattern */}
-          <div
-            className="absolute bottom-0 left-2 right-2 h-1.5 rounded-t"
-            style={{
-              background: `repeating-linear-gradient(
-                90deg,
-                ${cuisineColor.text}20,
-                ${cuisineColor.text}20 2px,
-                transparent 2px,
-                transparent 4px
-              )`,
-            }}
-          />
         </div>
       </div>
     </div>

@@ -490,6 +490,11 @@ export function BucketListOptimized() {
                 items={items}
                 onItemClick={handleItemClick}
                 onAddItem={handleAddRestaurant}
+                onItemUpdate={(updatedItem) => {
+                  setItems(prev => prev.map(item =>
+                    item.id === updatedItem.id ? updatedItem : item
+                  ));
+                }}
               />
             ) : viewMode === 'kitchen' ? (
               <KitchenView
