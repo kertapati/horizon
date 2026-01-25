@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS bucket_list_items (
   location_type TEXT CHECK (location_type IN ('sydney', 'australia', 'international', NULL)),
   specific_location TEXT,
   region TEXT,
+  country TEXT,
   is_physical BOOLEAN DEFAULT false,
   actionability TEXT CHECK (actionability IN ('can_do_now', 'needs_planning', 'needs_saving', 'needs_milestone', NULL)),
   target_year INTEGER,
@@ -130,3 +131,44 @@ CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_new_user();
+
+-- Year Notes Table (for Yearly Manifesto feature)
+CREATE TABLE IF NOT EXISTS year_notes (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  year INTEGER NOT NULL,
+  content TEXT DEFAULT '',
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW()) NOT NULL,
+  -- Ensure one note per user per year
+  UNIQUE(user_id, year)
+);
+
+-- Enable Row Level Security on year_notes
+ALTER TABLE year_notes ENABLE ROW LEVEL SECURITY;
+
+-- Year Notes Policies: Users can only access their own notes
+CREATE POLICY "Users can view own year notes"
+  ON year_notes FOR SELECT
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own year notes"
+  ON year_notes FOR INSERT
+  TO authenticated
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own year notes"
+  ON year_notes FOR UPDATE
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own year notes"
+  ON year_notes FOR DELETE
+  TO authenticated
+  USING (auth.uid() = user_id);
+
+-- Trigger for year_notes updated_at
+CREATE TRIGGER update_year_notes_updated_at
+  BEFORE UPDATE ON year_notes
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();

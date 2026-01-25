@@ -16,6 +16,7 @@ import { AddItemModal, NewItemData } from './add-item-modal';
 import { GroupedByCategoryView } from './grouped-by-category-view';
 import { RestaurantsView, RestaurantData } from './restaurants-view';
 import { KitchenView, DishData } from './kitchen-view';
+import { YearManifesto } from './year-manifesto';
 import {
   getTravelStats,
   getYearStats,
@@ -414,6 +415,13 @@ export function BucketListOptimized() {
                   onClick={() => setSelectedYear(null)}
                 />
               </div>
+            </div>
+          )}
+
+          {/* Year Manifesto - Shows below year tabs when a specific year is selected */}
+          {viewMode === 'year' && selectedYear !== null && (
+            <div className="px-3 sm:px-6 pt-4">
+              <YearManifesto year={selectedYear} />
             </div>
           )}
 
