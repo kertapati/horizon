@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { BucketListItem } from '@/types/database';
 import { createClient } from '@/lib/supabase/client';
 
@@ -8,6 +8,7 @@ interface RestaurantsViewProps {
   items: BucketListItem[];
   onItemUpdate?: (item: BucketListItem) => void;
   onRefresh?: () => void;
+  onItemClick?: (item: BucketListItem) => void;
 }
 
 export interface RestaurantData {
@@ -18,7 +19,52 @@ export interface RestaurantData {
   notes: string | null;
 }
 
-export function RestaurantsView({ items, onItemUpdate, onRefresh }: RestaurantsViewProps) {
+// Sydney region groupings
+const regionConfig: Record<string, { name: string; neighborhoods: string[] }> = {
+  city: {
+    name: 'City',
+    neighborhoods: ['cbd', 'city', 'haymarket', 'chinatown', 'the rocks', 'circular quay', 'wynyard', 'barangaroo', 'martin place', 'town hall', 'central', 'ultimo', 'pyrmont', 'darling harbour', 'millers point', 'dawes point'],
+  },
+  inner_west: {
+    name: 'Inner West',
+    neighborhoods: ['newtown', 'enmore', 'marrickville', 'erskineville', 'stanmore', 'leichhardt', 'glebe', 'annandale', 'balmain', 'rozelle', 'lilyfield', 'haberfield', 'summer hill', 'ashfield', 'croydon', 'dulwich hill', 'lewisham', 'petersham', 'camperdown', 'forest lodge', 'tempe', 'sydenham', 'st peters'],
+  },
+  eastern: {
+    name: 'Eastern Suburbs',
+    neighborhoods: ['surry hills', 'darlinghurst', 'paddington', 'woollahra', 'double bay', 'bondi', 'bondi junction', 'bondi beach', 'bronte', 'clovelly', 'coogee', 'randwick', 'kensington', 'kingsford', 'maroubra', 'potts point', 'elizabeth bay', 'rushcutters bay', 'kings cross', 'woolloomooloo', 'redfern', 'waterloo', 'zetland', 'rosebery', 'mascot', 'eastgardens', 'moore park', 'centennial park'],
+  },
+  north_shore: {
+    name: 'North Shore',
+    neighborhoods: ['north sydney', 'kirribilli', 'milsons point', 'neutral bay', 'cremorne', 'mosman', 'crows nest', 'st leonards', 'wollstonecraft', 'waverton', 'lavender bay', 'mcmahons point', 'chatswood', 'artarmon', 'willoughby', 'lane cove', 'hunters hill', 'gladesville'],
+  },
+  northern: {
+    name: 'Northern Suburbs',
+    neighborhoods: ['manly', 'dee why', 'brookvale', 'freshwater', 'curl curl', 'narrabeen', 'mona vale', 'newport', 'avalon', 'palm beach', 'northern beaches', 'hornsby', 'gordon', 'pymble', 'turramurra', 'wahroonga', 'killara', 'lindfield', 'roseville', 'castle hill', 'parramatta', 'epping', 'eastwood', 'ryde', 'macquarie park'],
+  },
+  south: {
+    name: 'South',
+    neighborhoods: ['hurstville', 'kogarah', 'rockdale', 'sans souci', 'brighton-le-sands', 'cronulla', 'miranda', 'sutherland', 'caringbah', 'gymea', 'engadine', 'kirrawee', 'oatley', 'mortdale', 'penshurst', 'riverwood', 'bankstown'],
+  },
+  west: {
+    name: 'West',
+    neighborhoods: ['strathfield', 'burwood', 'homebush', 'rhodes', 'concord', 'five dock', 'drummoyne', 'canada bay', 'olympic park', 'lidcombe', 'auburn', 'granville', 'merrylands', 'fairfield', 'cabramatta', 'liverpool', 'campbelltown', 'penrith', 'blacktown', 'parramatta'],
+  },
+};
+
+// Get region for a restaurant based on neighborhood
+function getRegionForRestaurant(item: BucketListItem): string {
+  const neighborhood = (item.neighborhood || item.notes || '').toLowerCase();
+
+  for (const [regionKey, config] of Object.entries(regionConfig)) {
+    if (config.neighborhoods.some(n => neighborhood.includes(n))) {
+      return regionKey;
+    }
+  }
+
+  return 'other';
+}
+
+export function RestaurantsView({ items, onItemUpdate, onRefresh, onItemClick }: RestaurantsViewProps) {
   const [showCompleted, setShowCompleted] = useState(false);
   const [quickInput, setQuickInput] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -46,8 +92,31 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh }: RestaurantsV
 
   const displayedItems = showCompleted ? completedItems : toVisitItems;
 
-  // Sort alphabetically
-  const sortedItems = [...displayedItems].sort((a, b) => a.title.localeCompare(b.title));
+  // Group items by region
+  const groupedByRegion = displayedItems.reduce((acc, item) => {
+    const region = getRegionForRestaurant(item);
+    if (!acc[region]) {
+      acc[region] = [];
+    }
+    acc[region].push(item);
+    return acc;
+  }, {} as Record<string, BucketListItem[]>);
+
+  // Sort items within each group alphabetically
+  Object.values(groupedByRegion).forEach(items => {
+    items.sort((a, b) => a.title.localeCompare(b.title));
+  });
+
+  // Get ordered regions (by count, descending)
+  const orderedRegions = Object.entries(groupedByRegion)
+    .sort((a, b) => b[1].length - a[1].length)
+    .map(([region]) => region);
+
+  // Separate favorites
+  const favoriteItems = displayedItems.filter(item => {
+    const optimistic = optimisticItems[item.id];
+    return optimistic?.is_priority ?? item.is_priority;
+  });
 
   // Quick add handler - just press Enter to save
   const handleQuickAdd = async () => {
@@ -95,7 +164,8 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh }: RestaurantsV
   };
 
   // Toggle completion status
-  const handleToggleComplete = useCallback(async (item: BucketListItem) => {
+  const handleToggleComplete = useCallback(async (item: BucketListItem, e: React.MouseEvent) => {
+    e.stopPropagation();
     const currentStatus = optimisticItems[item.id]?.status ?? item.status;
     const newStatus = currentStatus === 'completed' ? 'idea' : 'completed';
 
@@ -135,7 +205,8 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh }: RestaurantsV
   }, [optimisticItems, onItemUpdate]);
 
   // Toggle favorite
-  const handleToggleFavorite = useCallback(async (item: BucketListItem) => {
+  const handleToggleFavorite = useCallback(async (item: BucketListItem, e: React.MouseEvent) => {
+    e.stopPropagation();
     const currentFavorite = optimisticItems[item.id]?.is_priority ?? item.is_priority;
     const newFavorite = !currentFavorite;
 
@@ -169,71 +240,11 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh }: RestaurantsV
     }
   }, [optimisticItems, onItemUpdate]);
 
-  // Inline edit title
-  const handleTitleUpdate = useCallback(async (item: BucketListItem, newTitle: string) => {
-    if (newTitle === item.title || !newTitle.trim()) return;
-
-    setOptimisticItems(prev => ({
-      ...prev,
-      [item.id]: { ...prev[item.id], title: newTitle }
-    }));
-
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('bucket_list_items')
-        .update({ title: newTitle })
-        .eq('id', item.id);
-
-      if (error) {
-        console.error('Error updating title:', error);
-        setOptimisticItems(prev => ({
-          ...prev,
-          [item.id]: { ...prev[item.id], title: item.title }
-        }));
-      } else if (onItemUpdate) {
-        onItemUpdate({ ...item, title: newTitle });
-      }
-    } catch (err) {
-      console.error('Error:', err);
-    }
-  }, [onItemUpdate]);
-
-  // Inline edit notes
-  const handleNotesUpdate = useCallback(async (item: BucketListItem, newNotes: string) => {
-    if (newNotes === (item.notes || '')) return;
-
-    setOptimisticItems(prev => ({
-      ...prev,
-      [item.id]: { ...prev[item.id], notes: newNotes }
-    }));
-
-    try {
-      const supabase = createClient();
-      const { error } = await supabase
-        .from('bucket_list_items')
-        .update({ notes: newNotes || null })
-        .eq('id', item.id);
-
-      if (error) {
-        console.error('Error updating notes:', error);
-        setOptimisticItems(prev => ({
-          ...prev,
-          [item.id]: { ...prev[item.id], notes: item.notes }
-        }));
-      } else if (onItemUpdate) {
-        onItemUpdate({ ...item, notes: newNotes || null });
-      }
-    } catch (err) {
-      console.error('Error:', err);
-    }
-  }, [onItemUpdate]);
-
   return (
     <div className="h-full flex flex-col">
       {/* Quick Capture Bar */}
       <div className="p-4 border-b" style={{ borderColor: 'rgba(139, 123, 114, 0.15)', background: 'var(--paper-cream)' }}>
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           <div
             className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all"
             style={{
@@ -265,7 +276,7 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh }: RestaurantsV
 
       {/* Toggle: To Visit / Been There */}
       <div className="px-4 py-3 border-b" style={{ borderColor: 'rgba(139, 123, 114, 0.1)' }}>
-        <div className="max-w-3xl mx-auto flex items-center justify-between">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div
             className="inline-flex rounded-full p-0.5"
             style={{ background: 'rgba(139, 123, 114, 0.1)' }}
@@ -299,10 +310,10 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh }: RestaurantsV
         </div>
       </div>
 
-      {/* Restaurant List */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto py-2">
-          {sortedItems.length === 0 ? (
+      {/* Restaurant List - Chip Layout */}
+      <div className="flex-1 overflow-y-auto p-4">
+        <div className="max-w-5xl mx-auto">
+          {displayedItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <span className="text-4xl mb-3">🍽️</span>
               <p className="text-sm" style={{ color: 'var(--text-muted)' }}>
@@ -312,18 +323,79 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh }: RestaurantsV
               </p>
             </div>
           ) : (
-            <div className="divide-y" style={{ borderColor: 'rgba(139, 123, 114, 0.08)' }}>
-              {sortedItems.map(item => (
-                <MinimalistRow
-                  key={item.id}
-                  item={item}
-                  optimistic={optimisticItems[item.id]}
-                  onToggleComplete={() => handleToggleComplete(item)}
-                  onToggleFavorite={() => handleToggleFavorite(item)}
-                  onTitleUpdate={(title) => handleTitleUpdate(item, title)}
-                  onNotesUpdate={(notes) => handleNotesUpdate(item, notes)}
-                />
-              ))}
+            <div className="columns-1 md:columns-2 xl:columns-3 gap-6">
+              {/* Favorites Section - if any */}
+              {favoriteItems.length > 0 && (
+                <div className="card-warm break-inside-avoid mb-6">
+                  <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(139, 123, 114, 0.15)', background: 'rgba(253, 230, 138, 0.08)' }}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">❤️</span>
+                        <h3 className="font-serif font-bold" style={{ color: 'var(--charcoal-brown)' }}>Favorites</h3>
+                      </div>
+                      <span className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>{favoriteItems.length}</span>
+                    </div>
+                  </div>
+                  <div className="px-4 py-4">
+                    <div className="flex flex-wrap gap-1.5">
+                      {favoriteItems.map(item => (
+                        <RestaurantChip
+                          key={item.id}
+                          item={item}
+                          optimistic={optimisticItems[item.id]}
+                          onClick={onItemClick}
+                          onToggleComplete={(e) => handleToggleComplete(item, e)}
+                          onToggleFavorite={(e) => handleToggleFavorite(item, e)}
+                          featured
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Region Sections */}
+              {orderedRegions.map(regionKey => {
+                const regionItems = groupedByRegion[regionKey];
+                const config = regionConfig[regionKey];
+                const regionName = config?.name || 'Other';
+
+                // Filter out favorites from this section to avoid duplication
+                const nonFavoriteItems = regionItems.filter(item => {
+                  const optimistic = optimisticItems[item.id];
+                  return !(optimistic?.is_priority ?? item.is_priority);
+                });
+
+                if (nonFavoriteItems.length === 0) return null;
+
+                return (
+                  <div key={regionKey} className="card-warm break-inside-avoid mb-6">
+                    <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(139, 123, 114, 0.15)', background: 'rgba(253, 230, 138, 0.05)' }}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">📍</span>
+                          <h3 className="font-serif font-bold" style={{ color: 'var(--charcoal-brown)' }}>{regionName}</h3>
+                        </div>
+                        <span className="text-sm font-semibold" style={{ color: 'var(--text-muted)' }}>{nonFavoriteItems.length}</span>
+                      </div>
+                    </div>
+                    <div className="px-4 py-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        {nonFavoriteItems.map(item => (
+                          <RestaurantChip
+                            key={item.id}
+                            item={item}
+                            optimistic={optimisticItems[item.id]}
+                            onClick={onItemClick}
+                            onToggleComplete={(e) => handleToggleComplete(item, e)}
+                            onToggleFavorite={(e) => handleToggleFavorite(item, e)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -332,189 +404,67 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh }: RestaurantsV
   );
 }
 
-function MinimalistRow({
+// Restaurant Chip Component - similar to Life view
+function RestaurantChip({
   item,
   optimistic,
+  onClick,
   onToggleComplete,
   onToggleFavorite,
-  onTitleUpdate,
-  onNotesUpdate,
+  featured = false,
 }: {
   item: BucketListItem;
   optimistic?: Partial<BucketListItem>;
-  onToggleComplete: () => void;
-  onToggleFavorite: () => void;
-  onTitleUpdate: (title: string) => void;
-  onNotesUpdate: (notes: string) => void;
+  onClick?: (item: BucketListItem) => void;
+  onToggleComplete: (e: React.MouseEvent) => void;
+  onToggleFavorite: (e: React.MouseEvent) => void;
+  featured?: boolean;
 }) {
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editTitle, setEditTitle] = useState(item.title);
-  const [showNotes, setShowNotes] = useState(false);
-  const [editNotes, setEditNotes] = useState(item.notes || '');
-  const titleInputRef = useRef<HTMLInputElement>(null);
-  const notesInputRef = useRef<HTMLTextAreaElement>(null);
-
   const isCompleted = (optimistic?.status ?? item.status) === 'completed';
   const isFavorite = optimistic?.is_priority ?? item.is_priority;
   const displayTitle = optimistic?.title ?? item.title;
-  const displayNotes = optimistic?.notes ?? item.notes;
-
-  useEffect(() => {
-    if (isEditingTitle && titleInputRef.current) {
-      titleInputRef.current.focus();
-      titleInputRef.current.select();
-    }
-  }, [isEditingTitle]);
-
-  useEffect(() => {
-    if (showNotes && notesInputRef.current) {
-      notesInputRef.current.focus();
-    }
-  }, [showNotes]);
-
-  const handleTitleBlur = () => {
-    setIsEditingTitle(false);
-    if (editTitle.trim() && editTitle !== item.title) {
-      onTitleUpdate(editTitle.trim());
-    } else {
-      setEditTitle(item.title);
-    }
-  };
-
-  const handleNotesBlur = () => {
-    if (editNotes !== (item.notes || '')) {
-      onNotesUpdate(editNotes);
-    }
-  };
 
   return (
-    <div className="group">
-      <div className="flex items-center gap-3 px-4 py-2.5 hover:bg-white/50 transition-colors">
-        {/* Checkbox Circle */}
-        <button
-          onClick={onToggleComplete}
-          className="flex-shrink-0 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110"
-          style={{
-            borderColor: isCompleted ? '#22C55E' : 'rgba(139, 123, 114, 0.3)',
-            background: isCompleted ? '#22C55E' : 'transparent',
-          }}
-        >
-          {isCompleted && (
-            <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          )}
-        </button>
-
-        {/* Title - Editable */}
-        <div className="flex-1 min-w-0">
-          {isEditingTitle ? (
-            <input
-              ref={titleInputRef}
-              type="text"
-              value={editTitle}
-              onChange={(e) => setEditTitle(e.target.value)}
-              onBlur={handleTitleBlur}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleTitleBlur();
-                if (e.key === 'Escape') {
-                  setEditTitle(item.title);
-                  setIsEditingTitle(false);
-                }
-              }}
-              className="w-full bg-transparent outline-none text-sm font-medium px-1 -ml-1 rounded"
-              style={{
-                color: 'var(--charcoal-brown)',
-                background: 'rgba(253, 230, 138, 0.3)',
-              }}
-            />
-          ) : (
-            <span
-              onClick={() => {
-                setEditTitle(displayTitle);
-                setIsEditingTitle(true);
-              }}
-              className={`text-sm font-medium cursor-text hover:bg-amber-50 px-1 -ml-1 rounded transition-colors ${
-                isCompleted ? 'line-through opacity-60' : ''
-              }`}
-              style={{ color: 'var(--charcoal-brown)' }}
-            >
-              {displayTitle}
-            </span>
-          )}
-
-          {/* Inline notes preview */}
-          {displayNotes && !showNotes && (
-            <p
-              className="text-xs mt-0.5 truncate cursor-pointer hover:text-amber-700"
-              style={{ color: 'var(--text-muted)' }}
-              onClick={() => setShowNotes(true)}
-            >
-              {displayNotes}
-            </p>
-          )}
-        </div>
-
-        {/* Notes toggle */}
-        <button
-          onClick={() => setShowNotes(!showNotes)}
-          className={`flex-shrink-0 p-1.5 rounded transition-all ${
-            showNotes || displayNotes ? 'opacity-100' : 'opacity-0 group-hover:opacity-50'
-          }`}
-          title="Add notes"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            style={{ color: displayNotes ? 'var(--charcoal-brown)' : 'var(--text-muted)' }}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+    <button
+      onClick={() => onClick?.(item)}
+      className={`group relative px-2.5 py-1 rounded-full text-xs transition-all flex items-center gap-1.5 ${
+        featured
+          ? 'bg-red-50 hover:bg-red-100 border border-red-200'
+          : isCompleted
+          ? 'bg-green-50 hover:bg-green-100 border border-green-200'
+          : 'bg-stone-100 hover:bg-stone-200 border border-stone-200'
+      }`}
+      style={{
+        color: 'var(--charcoal-brown)',
+      }}
+    >
+      {/* Quick complete on left click with shift */}
+      <span
+        onClick={onToggleComplete}
+        className={`w-3.5 h-3.5 rounded-full border flex-shrink-0 flex items-center justify-center cursor-pointer hover:scale-110 transition-transform ${
+          isCompleted ? 'bg-green-500 border-green-500' : 'border-stone-300 hover:border-green-400'
+        }`}
+      >
+        {isCompleted && (
+          <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={4}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
           </svg>
-        </button>
+        )}
+      </span>
 
-        {/* Heart / Favorite */}
-        <button
-          onClick={onToggleFavorite}
-          className="flex-shrink-0 p-1.5 transition-transform hover:scale-110"
-          title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-        >
-          {isFavorite ? (
-            <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-            </svg>
-          ) : (
-            <svg className="w-5 h-5 text-gray-300 group-hover:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z" />
-            </svg>
-          )}
-        </button>
-      </div>
+      <span className={isCompleted ? 'line-through opacity-60' : ''}>
+        {displayTitle}
+      </span>
 
-      {/* Expandable Notes Area */}
-      {showNotes && (
-        <div className="px-4 pb-3 pl-14">
-          <textarea
-            ref={notesInputRef}
-            value={editNotes}
-            onChange={(e) => setEditNotes(e.target.value)}
-            onBlur={handleNotesBlur}
-            placeholder="Add notes (neighborhood, cuisine, price range...)"
-            className="w-full text-xs p-2 rounded-lg resize-none outline-none transition-all"
-            style={{
-              background: 'rgba(139, 123, 114, 0.05)',
-              border: '1px solid rgba(139, 123, 114, 0.15)',
-              color: 'var(--charcoal-brown)',
-              minHeight: '60px',
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = 'rgba(212, 175, 55, 0.5)';
-              e.target.style.background = 'white';
-            }}
-          />
-        </div>
-      )}
-    </div>
+      {/* Heart on hover */}
+      <span
+        onClick={onToggleFavorite}
+        className={`cursor-pointer hover:scale-125 transition-transform ${
+          isFavorite ? 'opacity-100' : 'opacity-0 group-hover:opacity-60'
+        }`}
+      >
+        {isFavorite ? '❤️' : '🤍'}
+      </span>
+    </button>
   );
 }

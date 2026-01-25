@@ -398,6 +398,7 @@ export function BucketListOptimized() {
             ) : viewMode === 'restaurants' ? (
               <RestaurantsView
                 items={items}
+                onItemClick={handleItemClick}
                 onItemUpdate={(updatedItem) => {
                   setItems(prev => prev.map(item =>
                     item.id === updatedItem.id ? updatedItem : item
@@ -408,6 +409,7 @@ export function BucketListOptimized() {
             ) : viewMode === 'kitchen' ? (
               <KitchenView
                 items={items}
+                onItemClick={handleItemClick}
                 onItemUpdate={(updatedItem) => {
                   setItems(prev => prev.map(item =>
                     item.id === updatedItem.id ? updatedItem : item
@@ -460,15 +462,12 @@ export function BucketListOptimized() {
       </div>
 
       {/* Detail Panel */}
-      {/* Detail Panel - hidden for gastronomy views (they have inline editing) */}
-      {viewMode !== 'restaurants' && viewMode !== 'kitchen' && (
-        <DetailPanel
-          item={selectedItem}
-          isOpen={selectedItem !== null}
-          onClose={() => setSelectedItem(null)}
-          onUpdate={fetchItems}
-        />
-      )}
+      <DetailPanel
+        item={selectedItem}
+        isOpen={selectedItem !== null}
+        onClose={() => setSelectedItem(null)}
+        onUpdate={fetchItems}
+      />
 
       {/* Add Item Modal */}
       <AddItemModal
