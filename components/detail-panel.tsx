@@ -155,9 +155,17 @@ export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProp
   ];
 
   return (
-    <aside className="w-[400px] flex-shrink-0 border-l border-gray-200 bg-white flex flex-col h-full">
+    <>
+      {/* Mobile overlay backdrop */}
+      <div
+        className="fixed inset-0 bg-black/50 z-40 md:hidden"
+        onClick={onClose}
+      />
+
+      {/* Panel - full screen on mobile, sidebar on desktop */}
+      <aside className="fixed inset-0 z-50 md:relative md:inset-auto md:z-auto w-full md:w-[400px] flex-shrink-0 md:border-l border-gray-200 bg-white flex flex-col h-full">
         {/* Header */}
-        <div className="flex h-14 items-center justify-between border-b border-gray-200 px-6">
+        <div className="flex h-14 items-center justify-between border-b border-gray-200 px-4 sm:px-6">
           <h2 className="text-lg font-semibold text-gray-900">Goal Details</h2>
           <button
             onClick={onClose}
@@ -170,7 +178,7 @@ export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProp
         </div>
 
         {/* Content */}
-        <div className="h-[calc(100%-112px)] overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="space-y-6">
             {/* Title */}
             <div>
@@ -391,7 +399,7 @@ export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProp
         </div>
 
         {/* Footer */}
-        <div className="flex h-14 flex-shrink-0 items-center justify-between border-t border-gray-200 bg-white px-6">
+        <div className="flex h-14 flex-shrink-0 items-center justify-between border-t border-gray-200 bg-white px-4 sm:px-6">
           <button
             onClick={handleDelete}
             className="text-sm font-medium text-red-600 hover:text-red-700"
@@ -406,6 +414,7 @@ export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProp
             {isSaving ? 'Saving...' : 'Save'}
           </button>
         </div>
-    </aside>
+      </aside>
+    </>
   );
 }

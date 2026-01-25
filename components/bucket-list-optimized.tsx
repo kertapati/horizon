@@ -254,7 +254,7 @@ export function BucketListOptimized() {
 
           {/* Category filter buttons for Overview */}
           {viewMode === 'all' && (
-            <div className="border-b glass-effect px-6 py-3" style={{ borderColor: 'rgba(139, 123, 114, 0.15)' }}>
+            <div className="border-b glass-effect px-3 sm:px-6 py-3" style={{ borderColor: 'rgba(139, 123, 114, 0.15)' }}>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setSelectedCategory(null)}
@@ -296,7 +296,7 @@ export function BucketListOptimized() {
 
           {/* Year tabs */}
           {viewMode === 'year' && (
-            <div className="border-b border-gray-200 bg-white px-6 py-3">
+            <div className="border-b border-gray-200 bg-white px-3 sm:px-6 py-3">
               <div className="flex gap-2">
                 <RegionTab
                   label="2026"
@@ -328,7 +328,7 @@ export function BucketListOptimized() {
 
           {/* Ownership tabs */}
           {viewMode === 'ownership' && (
-            <div className="border-b border-gray-200 bg-white px-6 py-3">
+            <div className="border-b border-gray-200 bg-white px-3 sm:px-6 py-3">
               <div className="flex gap-2">
                 <RegionTab
                   label="👫 Couples"
@@ -353,7 +353,7 @@ export function BucketListOptimized() {
           )}
 
           {/* View-specific content */}
-          <div className="p-6">
+          <div className="p-3 sm:p-6">
             {viewMode === 'category' ? (
               <CategoryView
                 items={filteredItems}

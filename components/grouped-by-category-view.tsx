@@ -56,7 +56,7 @@ export function GroupedByCategoryView({
   return (
     <div>
       {/* Category Filter Buttons */}
-      <div className="mb-6 border-b glass-effect px-6 py-3" style={{ borderColor: 'rgba(139, 123, 114, 0.15)' }}>
+      <div className="mb-6 border-b glass-effect px-3 sm:px-6 py-3" style={{ borderColor: 'rgba(139, 123, 114, 0.15)' }}>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => onCategorySelect(null)}
@@ -97,7 +97,7 @@ export function GroupedByCategoryView({
       </div>
 
       {/* Grouped Items */}
-      <div className="px-6 space-y-6">
+      <div className="px-3 sm:px-6 space-y-4 sm:space-y-6">
         {filteredGroups.map(group => {
           const config = categoryConfig[group.category];
           return (
