@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Profile } from '@/types/database';
 
-type ViewMode = 'all' | 'category' | 'travel' | 'life' | 'year' | 'ownership' | 'in_progress' | 'completed';
+type ViewMode = 'all' | 'category' | 'travel' | 'life' | 'year' | 'ownership' | 'restaurants' | 'kitchen' | 'in_progress' | 'completed';
 
 interface SidebarNavProps {
   currentView: ViewMode;
@@ -103,6 +103,25 @@ export function SidebarNav({ currentView, onViewChange, onRegionSelect, profile 
             active={currentView === 'ownership'}
             collapsed={collapsed}
             onClick={() => onViewChange('ownership')}
+          />
+
+          <div className="my-2 border-t" style={{ borderColor: 'rgba(139, 123, 114, 0.15)' }} />
+
+          {/* Gastronomy Module */}
+          <NavItem
+            icon="🍽️"
+            label="Restaurants"
+            active={currentView === 'restaurants'}
+            collapsed={collapsed}
+            onClick={() => onViewChange('restaurants')}
+          />
+
+          <NavItem
+            icon="👨‍🍳"
+            label="Kitchen"
+            active={currentView === 'kitchen'}
+            collapsed={collapsed}
+            onClick={() => onViewChange('kitchen')}
           />
 
           <div className="my-2 border-t" style={{ borderColor: 'rgba(139, 123, 114, 0.15)' }} />

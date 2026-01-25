@@ -14,6 +14,8 @@ import { LifeView } from './life-view';
 import { CategoryView } from './category-view';
 import { AddItemModal, NewItemData } from './add-item-modal';
 import { GroupedByCategoryView } from './grouped-by-category-view';
+import { RestaurantsView } from './restaurants-view';
+import { KitchenView } from './kitchen-view';
 import {
   getTravelStats,
   getYearStats,
@@ -22,7 +24,7 @@ import {
 } from '@/lib/bucket-list-stats';
 import { categoryConfig } from '@/lib/category-config';
 
-type ViewMode = 'all' | 'category' | 'travel' | 'life' | 'year' | 'ownership' | 'in_progress' | 'completed';
+type ViewMode = 'all' | 'category' | 'travel' | 'life' | 'year' | 'ownership' | 'restaurants' | 'kitchen' | 'in_progress' | 'completed';
 type Density = 'compact' | 'comfortable' | 'table';
 
 export function BucketListOptimized() {
@@ -151,6 +153,8 @@ export function BucketListOptimized() {
       case 'life': return 'Life & Projects';
       case 'year': return selectedYear ? `${selectedYear} Goals` : 'Unassigned';
       case 'ownership': return selectedOwnership === 'couples' ? 'Couples' : selectedOwnership === 'peter' ? 'Peter' : 'Xi';
+      case 'restaurants': return 'Restaurants';
+      case 'kitchen': return 'Kitchen';
       case 'in_progress': return 'In Progress';
       case 'completed': return 'Completed';
       default: return 'Horizon';
@@ -200,7 +204,14 @@ export function BucketListOptimized() {
           season_notes: null,
           completed_date: null,
           completion_notes: null,
-          related_item_ids: []
+          related_item_ids: [],
+          // Gastronomy fields
+          gastronomy_type: data.gastronomy_type,
+          cuisine: data.cuisine,
+          neighborhood: data.neighborhood,
+          price_level: data.price_level,
+          difficulty: data.difficulty,
+          notes: data.notes,
         });
 
       if (error) {
@@ -368,6 +379,16 @@ export function BucketListOptimized() {
             ) : viewMode === 'life' ? (
               <LifeView
                 items={filteredItems}
+                onItemClick={handleItemClick}
+              />
+            ) : viewMode === 'restaurants' ? (
+              <RestaurantsView
+                items={items}
+                onItemClick={handleItemClick}
+              />
+            ) : viewMode === 'kitchen' ? (
+              <KitchenView
+                items={items}
                 onItemClick={handleItemClick}
               />
             ) : viewMode === 'in_progress' ? (

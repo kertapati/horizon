@@ -56,7 +56,14 @@ CREATE TABLE IF NOT EXISTS bucket_list_items (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW()) NOT NULL,
   is_priority BOOLEAN DEFAULT false,
-  related_item_ids UUID[] DEFAULT '{}'
+  related_item_ids UUID[] DEFAULT '{}',
+  -- Gastronomy Module fields
+  gastronomy_type TEXT CHECK (gastronomy_type IN ('restaurant', 'dish', NULL)),
+  cuisine TEXT,
+  neighborhood TEXT,
+  price_level TEXT CHECK (price_level IN ('$', '$$', '$$$', '$$$$', NULL)),
+  difficulty TEXT CHECK (difficulty IN ('easy', 'medium', 'complex', NULL)),
+  notes TEXT
 );
 
 -- Enable Row Level Security on bucket_list_items

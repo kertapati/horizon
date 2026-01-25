@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Category } from '@/types/database';
+import { Category, GastronomyType, PriceLevel, Difficulty, CUISINES } from '@/types/database';
 import { categoryConfig } from '@/lib/category-config';
 import { countryList } from '@/lib/countries';
 
@@ -23,6 +23,13 @@ export interface NewItemData {
   ownership: 'couples' | 'peter' | 'wife';
   is_priority: boolean;
   description: string;
+  // Gastronomy fields
+  gastronomy_type: GastronomyType | null;
+  cuisine: string | null;
+  neighborhood: string | null;
+  price_level: PriceLevel | null;
+  difficulty: Difficulty | null;
+  notes: string | null;
 }
 
 export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
@@ -42,6 +49,19 @@ export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
   const [countryInput, setCountryInput] = useState('');
   const [showCountrySuggestions, setShowCountrySuggestions] = useState(false);
   const [filteredCountries, setFilteredCountries] = useState<string[]>([]);
+
+  // Gastronomy Mode state
+  const [gastronomyType, setGastronomyType] = useState<GastronomyType | null>(null);
+  const [cuisine, setCuisine] = useState('');
+  const [neighborhood, setNeighborhood] = useState('');
+  const [priceLevel, setPriceLevel] = useState<PriceLevel | null>(null);
+  const [difficulty, setDifficulty] = useState<Difficulty | null>(null);
+  const [notes, setNotes] = useState('');
+  const [showCuisineSuggestions, setShowCuisineSuggestions] = useState(false);
+  const [filteredCuisines, setFilteredCuisines] = useState<string[]>([]);
+
+  // Check if Food & Drink is selected (for showing gastronomy fields)
+  const isFoodDrinkSelected = selectedCategories.includes('food_drink');
 
   // Close on escape key
   useEffect(() => {
@@ -72,6 +92,32 @@ export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
       setShowCountrySuggestions(false);
     }
   }, [countryInput]);
+
+  // Filter cuisines based on input
+  useEffect(() => {
+    if (cuisine.trim().length > 0) {
+      const filtered = CUISINES.filter(c =>
+        c.toLowerCase().includes(cuisine.toLowerCase())
+      );
+      setFilteredCuisines(filtered);
+      setShowCuisineSuggestions(filtered.length > 0);
+    } else {
+      setFilteredCuisines([...CUISINES]);
+      setShowCuisineSuggestions(false);
+    }
+  }, [cuisine]);
+
+  // Reset gastronomy fields when Food & Drink is deselected
+  useEffect(() => {
+    if (!isFoodDrinkSelected) {
+      setGastronomyType(null);
+      setCuisine('');
+      setNeighborhood('');
+      setPriceLevel(null);
+      setDifficulty(null);
+      setNotes('');
+    }
+  }, [isFoodDrinkSelected]);
 
   const toggleCategory = (category: Category) => {
     setSelectedCategories(prev => {
@@ -112,6 +158,13 @@ export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
       ownership,
       is_priority: isPriority,
       description: description.trim(),
+      // Gastronomy fields
+      gastronomy_type: isFoodDrinkSelected ? gastronomyType : null,
+      cuisine: isFoodDrinkSelected && cuisine.trim() ? cuisine.trim() : null,
+      neighborhood: isFoodDrinkSelected && gastronomyType === 'restaurant' && neighborhood.trim() ? neighborhood.trim() : null,
+      price_level: isFoodDrinkSelected && gastronomyType === 'restaurant' ? priceLevel : null,
+      difficulty: isFoodDrinkSelected && gastronomyType === 'dish' ? difficulty : null,
+      notes: notes.trim() || null,
     };
 
     console.log('New Adventure Data:', data);
@@ -139,6 +192,13 @@ export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
       setOwnership('couples');
       setIsPriority(false);
       setDescription('');
+      // Reset gastronomy fields
+      setGastronomyType(null);
+      setCuisine('');
+      setNeighborhood('');
+      setPriceLevel(null);
+      setDifficulty(null);
+      setNotes('');
       onClose();
     }, 800);
   };
@@ -264,6 +324,207 @@ export function AddItemModal({ isOpen, onClose, onAdd }: AddItemModalProps) {
                 <p className="text-xs text-gray-500">Click categories to add/remove</p>
               </div>
             </div>
+
+            {/* Gastronomy Mode - Only show when Food & Drink is selected */}
+            {isFoodDrinkSelected && (
+              <div
+                className="p-4 rounded-xl space-y-4"
+                style={{
+                  background: 'rgba(253, 230, 138, 0.15)',
+                  border: '1px solid rgba(253, 230, 138, 0.4)',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">🍽️</span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--charcoal-brown)' }}>
+                    Gastronomy Mode
+                  </span>
+                </div>
+
+                {/* Type Selection - Radio buttons */}
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-gray-700">Type</label>
+                  <div className="flex gap-3">
+                    <label
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer transition-all ${
+                        gastronomyType === 'restaurant'
+                          ? 'ring-2 ring-amber-500'
+                          : 'hover:bg-white/50'
+                      }`}
+                      style={{
+                        background: gastronomyType === 'restaurant' ? 'white' : 'rgba(255,255,255,0.3)',
+                        border: '1px solid rgba(139, 123, 114, 0.2)',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="gastronomyType"
+                        value="restaurant"
+                        checked={gastronomyType === 'restaurant'}
+                        onChange={() => setGastronomyType('restaurant')}
+                        className="sr-only"
+                      />
+                      <span className="text-lg">🍴</span>
+                      <span className="text-sm font-medium" style={{ color: 'var(--charcoal-brown)' }}>Restaurant</span>
+                    </label>
+                    <label
+                      className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg cursor-pointer transition-all ${
+                        gastronomyType === 'dish'
+                          ? 'ring-2 ring-amber-500'
+                          : 'hover:bg-white/50'
+                      }`}
+                      style={{
+                        background: gastronomyType === 'dish' ? 'white' : 'rgba(255,255,255,0.3)',
+                        border: '1px solid rgba(139, 123, 114, 0.2)',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="gastronomyType"
+                        value="dish"
+                        checked={gastronomyType === 'dish'}
+                        onChange={() => setGastronomyType('dish')}
+                        className="sr-only"
+                      />
+                      <span className="text-lg">👨‍🍳</span>
+                      <span className="text-sm font-medium" style={{ color: 'var(--charcoal-brown)' }}>Dish to Cook</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Cuisine/Style - With autocomplete */}
+                <div className="relative">
+                  <label className="mb-2 block text-xs font-medium text-gray-700">
+                    {gastronomyType === 'dish' ? 'Style/Cuisine' : 'Cuisine'}
+                  </label>
+                  <input
+                    type="text"
+                    value={cuisine}
+                    onChange={(e) => setCuisine(e.target.value)}
+                    onFocus={() => setShowCuisineSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowCuisineSuggestions(false), 150)}
+                    placeholder="e.g., Japanese, Italian, Thai"
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    style={{ color: 'var(--charcoal-brown)' }}
+                    autoComplete="off"
+                  />
+                  {showCuisineSuggestions && filteredCuisines.length > 0 && (
+                    <div
+                      className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-40 overflow-y-auto"
+                      style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' }}
+                    >
+                      {filteredCuisines.slice(0, 8).map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setCuisine(c);
+                            setShowCuisineSuggestions(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 transition-colors"
+                          style={{ color: 'var(--charcoal-brown)' }}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Restaurant-specific fields */}
+                {gastronomyType === 'restaurant' && (
+                  <>
+                    {/* Neighborhood/Location */}
+                    <div>
+                      <label className="mb-2 block text-xs font-medium text-gray-700">Neighborhood / Location</label>
+                      <input
+                        type="text"
+                        value={neighborhood}
+                        onChange={(e) => setNeighborhood(e.target.value)}
+                        placeholder="e.g., Surry Hills, CBD, Newtown"
+                        className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                        style={{ color: 'var(--charcoal-brown)' }}
+                      />
+                    </div>
+
+                    {/* Price Level */}
+                    <div>
+                      <label className="mb-2 block text-xs font-medium text-gray-700">Price Level</label>
+                      <div className="flex gap-2">
+                        {(['$', '$$', '$$$', '$$$$'] as PriceLevel[]).map((price) => (
+                          <button
+                            key={price}
+                            type="button"
+                            onClick={() => setPriceLevel(priceLevel === price ? null : price)}
+                            className={`flex-1 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                              priceLevel === price
+                                ? 'ring-2 ring-amber-500 bg-white'
+                                : 'bg-white/50 hover:bg-white/80'
+                            }`}
+                            style={{
+                              color: priceLevel === price ? 'var(--charcoal-brown)' : 'var(--text-muted)',
+                              border: '1px solid rgba(139, 123, 114, 0.2)',
+                            }}
+                          >
+                            {price}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Dish-specific fields */}
+                {gastronomyType === 'dish' && (
+                  <div>
+                    <label className="mb-2 block text-xs font-medium text-gray-700">Difficulty</label>
+                    <div className="flex gap-2">
+                      {([
+                        { value: 'easy' as Difficulty, emoji: '🟢', label: 'Easy' },
+                        { value: 'medium' as Difficulty, emoji: '🟡', label: 'Medium' },
+                        { value: 'complex' as Difficulty, emoji: '🔴', label: 'Complex' },
+                      ]).map((d) => (
+                        <button
+                          key={d.value}
+                          type="button"
+                          onClick={() => setDifficulty(difficulty === d.value ? null : d.value)}
+                          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold transition-all ${
+                            difficulty === d.value
+                              ? 'ring-2 ring-amber-500 bg-white'
+                              : 'bg-white/50 hover:bg-white/80'
+                          }`}
+                          style={{
+                            color: difficulty === d.value ? 'var(--charcoal-brown)' : 'var(--text-muted)',
+                            border: '1px solid rgba(139, 123, 114, 0.2)',
+                          }}
+                        >
+                          <span>{d.emoji}</span>
+                          <span>{d.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Notes field - for Google Maps links, recipe links, etc. */}
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-gray-700">
+                    Notes <span className="text-xs font-normal opacity-60">(Google Maps link, recipe URL, etc.)</span>
+                  </label>
+                  <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    placeholder={gastronomyType === 'restaurant'
+                      ? "Paste Google Maps link or add notes..."
+                      : "Recipe link or cooking notes..."}
+                    rows={2}
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm resize-none focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    style={{ color: 'var(--charcoal-brown)' }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Status */}
             <div>

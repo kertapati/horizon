@@ -1,6 +1,6 @@
 'use client';
 
-import { BucketListItem, Category } from '@/types/database';
+import { BucketListItem, Category, GastronomyType, PriceLevel, Difficulty, CUISINES } from '@/types/database';
 import { categoryConfig } from '@/lib/category-config';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
@@ -21,12 +21,18 @@ export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProp
   const [showCountrySuggestions, setShowCountrySuggestions] = useState(false);
   const [filteredCountries, setFilteredCountries] = useState<string[]>([]);
 
+  // Gastronomy state
+  const [cuisineInput, setCuisineInput] = useState('');
+  const [showCuisineSuggestions, setShowCuisineSuggestions] = useState(false);
+  const [filteredCuisines, setFilteredCuisines] = useState<string[]>([]);
+
   // Initialize edited item when item changes
   useEffect(() => {
     if (item) {
       setEditedItem(item);
       setSelectedCategories(item.categories);
       setCountryInput(item.country || '');
+      setCuisineInput(item.cuisine || '');
     }
   }, [item]);
 
@@ -42,6 +48,19 @@ export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProp
       setShowCountrySuggestions(false);
     }
   }, [countryInput]);
+
+  // Filter cuisines based on input
+  useEffect(() => {
+    if (cuisineInput.trim().length > 0) {
+      const filtered = CUISINES.filter(c =>
+        c.toLowerCase().includes(cuisineInput.toLowerCase())
+      );
+      setFilteredCuisines(filtered);
+    } else {
+      setFilteredCuisines([...CUISINES]);
+      setShowCuisineSuggestions(false);
+    }
+  }, [cuisineInput]);
 
   // Close on escape key
   useEffect(() => {
@@ -73,6 +92,13 @@ export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProp
         target_year: editedItem.target_year,
         ownership: editedItem.ownership,
         is_priority: editedItem.is_priority,
+        // Gastronomy fields
+        gastronomy_type: editedItem.gastronomy_type,
+        cuisine: editedItem.cuisine,
+        neighborhood: editedItem.neighborhood,
+        price_level: editedItem.price_level,
+        difficulty: editedItem.difficulty,
+        notes: editedItem.notes,
       };
 
       // If status changed to completed, set completion date
@@ -234,6 +260,209 @@ export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProp
                 <p className="text-xs text-gray-500">Click categories to add/remove</p>
               </div>
             </div>
+
+            {/* Gastronomy Fields - Only show when Food & Drink is selected */}
+            {selectedCategories.includes('food_drink') && (
+              <div
+                className="p-4 rounded-xl space-y-4"
+                style={{
+                  background: 'rgba(253, 230, 138, 0.15)',
+                  border: '1px solid rgba(253, 230, 138, 0.4)',
+                }}
+              >
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-lg">🍽️</span>
+                  <span className="text-sm font-semibold" style={{ color: 'var(--charcoal-brown)' }}>
+                    Gastronomy Details
+                  </span>
+                </div>
+
+                {/* Type Selection */}
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-gray-700">Type</label>
+                  <div className="flex gap-3">
+                    <label
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${
+                        editedItem.gastronomy_type === 'restaurant'
+                          ? 'ring-2 ring-amber-500'
+                          : 'hover:bg-white/50'
+                      }`}
+                      style={{
+                        background: editedItem.gastronomy_type === 'restaurant' ? 'white' : 'rgba(255,255,255,0.3)',
+                        border: '1px solid rgba(139, 123, 114, 0.2)',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="gastronomyType"
+                        value="restaurant"
+                        checked={editedItem.gastronomy_type === 'restaurant'}
+                        onChange={() => setEditedItem({ ...editedItem, gastronomy_type: 'restaurant' })}
+                        className="sr-only"
+                      />
+                      <span>🍴</span>
+                      <span className="text-sm font-medium" style={{ color: 'var(--charcoal-brown)' }}>Restaurant</span>
+                    </label>
+                    <label
+                      className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${
+                        editedItem.gastronomy_type === 'dish'
+                          ? 'ring-2 ring-amber-500'
+                          : 'hover:bg-white/50'
+                      }`}
+                      style={{
+                        background: editedItem.gastronomy_type === 'dish' ? 'white' : 'rgba(255,255,255,0.3)',
+                        border: '1px solid rgba(139, 123, 114, 0.2)',
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="gastronomyType"
+                        value="dish"
+                        checked={editedItem.gastronomy_type === 'dish'}
+                        onChange={() => setEditedItem({ ...editedItem, gastronomy_type: 'dish' })}
+                        className="sr-only"
+                      />
+                      <span>👨‍🍳</span>
+                      <span className="text-sm font-medium" style={{ color: 'var(--charcoal-brown)' }}>Dish</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Cuisine */}
+                <div className="relative">
+                  <label className="mb-2 block text-xs font-medium text-gray-700">Cuisine/Style</label>
+                  <input
+                    type="text"
+                    value={cuisineInput}
+                    onChange={(e) => {
+                      setCuisineInput(e.target.value);
+                      setEditedItem({ ...editedItem, cuisine: e.target.value || null });
+                    }}
+                    onFocus={() => setShowCuisineSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowCuisineSuggestions(false), 150)}
+                    placeholder="e.g., Japanese, Italian"
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    style={{ color: 'var(--charcoal-brown)' }}
+                    autoComplete="off"
+                  />
+                  {showCuisineSuggestions && filteredCuisines.length > 0 && (
+                    <div className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-lg border border-gray-200 max-h-40 overflow-y-auto">
+                      {filteredCuisines.slice(0, 8).map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setCuisineInput(c);
+                            setEditedItem({ ...editedItem, cuisine: c });
+                            setShowCuisineSuggestions(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-amber-50 transition-colors"
+                          style={{ color: 'var(--charcoal-brown)' }}
+                        >
+                          {c}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Restaurant-specific: Neighborhood */}
+                {editedItem.gastronomy_type === 'restaurant' && (
+                  <div>
+                    <label className="mb-2 block text-xs font-medium text-gray-700">Neighborhood</label>
+                    <input
+                      type="text"
+                      value={editedItem.neighborhood || ''}
+                      onChange={(e) => setEditedItem({ ...editedItem, neighborhood: e.target.value || null })}
+                      placeholder="e.g., Surry Hills, CBD"
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                      style={{ color: 'var(--charcoal-brown)' }}
+                    />
+                  </div>
+                )}
+
+                {/* Restaurant-specific: Price Level */}
+                {editedItem.gastronomy_type === 'restaurant' && (
+                  <div>
+                    <label className="mb-2 block text-xs font-medium text-gray-700">Price Level</label>
+                    <div className="flex gap-2">
+                      {(['$', '$$', '$$$', '$$$$'] as PriceLevel[]).map((price) => (
+                        <button
+                          key={price}
+                          type="button"
+                          onClick={() => setEditedItem({
+                            ...editedItem,
+                            price_level: editedItem.price_level === price ? null : price
+                          })}
+                          className={`flex-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                            editedItem.price_level === price
+                              ? 'ring-2 ring-amber-500 bg-white'
+                              : 'bg-white/50 hover:bg-white/80'
+                          }`}
+                          style={{
+                            color: editedItem.price_level === price ? 'var(--charcoal-brown)' : 'var(--text-muted)',
+                            border: '1px solid rgba(139, 123, 114, 0.2)',
+                          }}
+                        >
+                          {price}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Dish-specific: Difficulty */}
+                {editedItem.gastronomy_type === 'dish' && (
+                  <div>
+                    <label className="mb-2 block text-xs font-medium text-gray-700">Difficulty</label>
+                    <div className="flex gap-2">
+                      {([
+                        { value: 'easy' as Difficulty, emoji: '🟢', label: 'Easy' },
+                        { value: 'medium' as Difficulty, emoji: '🟡', label: 'Medium' },
+                        { value: 'complex' as Difficulty, emoji: '🔴', label: 'Complex' },
+                      ]).map((d) => (
+                        <button
+                          key={d.value}
+                          type="button"
+                          onClick={() => setEditedItem({
+                            ...editedItem,
+                            difficulty: editedItem.difficulty === d.value ? null : d.value
+                          })}
+                          className={`flex-1 flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                            editedItem.difficulty === d.value
+                              ? 'ring-2 ring-amber-500 bg-white'
+                              : 'bg-white/50 hover:bg-white/80'
+                          }`}
+                          style={{
+                            color: editedItem.difficulty === d.value ? 'var(--charcoal-brown)' : 'var(--text-muted)',
+                            border: '1px solid rgba(139, 123, 114, 0.2)',
+                          }}
+                        >
+                          <span>{d.emoji}</span>
+                          <span>{d.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Notes */}
+                <div>
+                  <label className="mb-2 block text-xs font-medium text-gray-700">Notes</label>
+                  <textarea
+                    value={editedItem.notes || ''}
+                    onChange={(e) => setEditedItem({ ...editedItem, notes: e.target.value || null })}
+                    placeholder={editedItem.gastronomy_type === 'restaurant'
+                      ? "Google Maps link, notes..."
+                      : "Recipe link, cooking notes..."}
+                    rows={2}
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm resize-none focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500"
+                    style={{ color: 'var(--charcoal-brown)' }}
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Status */}
             <div>

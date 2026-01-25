@@ -5,6 +5,11 @@ export type Season = 'summer' | 'winter' | 'spring' | 'autumn' | 'specific_date'
 export type Status = 'idea' | 'planned' | 'in_progress' | 'completed';
 export type Ownership = 'couples' | 'peter' | 'wife';
 
+// Gastronomy Module types
+export type GastronomyType = 'restaurant' | 'dish';
+export type PriceLevel = '$' | '$$' | '$$$' | '$$$$';
+export type Difficulty = 'easy' | 'medium' | 'complex';
+
 export const CATEGORIES = [
   'travel',
   'adventure',
@@ -67,6 +72,13 @@ export interface BucketListItem {
   updated_at: string;
   is_priority: boolean;
   related_item_ids: string[];
+  // Gastronomy Module fields
+  gastronomy_type: GastronomyType | null;
+  cuisine: string | null;
+  neighborhood: string | null;
+  price_level: PriceLevel | null;
+  difficulty: Difficulty | null;
+  notes: string | null;
 }
 
 export interface CreateBucketListItem {
@@ -86,6 +98,13 @@ export interface CreateBucketListItem {
   status?: Status;
   ownership?: Ownership;
   is_priority?: boolean;
+  // Gastronomy Module fields
+  gastronomy_type?: GastronomyType | null;
+  cuisine?: string | null;
+  neighborhood?: string | null;
+  price_level?: PriceLevel | null;
+  difficulty?: Difficulty | null;
+  notes?: string | null;
 }
 
 export interface UpdateBucketListItem extends Partial<CreateBucketListItem> {
@@ -93,3 +112,31 @@ export interface UpdateBucketListItem extends Partial<CreateBucketListItem> {
   completion_notes?: string | null;
   related_item_ids?: string[];
 }
+
+// Common cuisine types for autocomplete
+export const CUISINES = [
+  'Japanese',
+  'Italian',
+  'Chinese',
+  'Thai',
+  'French',
+  'Korean',
+  'Vietnamese',
+  'Indian',
+  'Mexican',
+  'Mediterranean',
+  'Greek',
+  'Spanish',
+  'Middle Eastern',
+  'American',
+  'Australian Modern',
+  'Fusion',
+  'Seafood',
+  'Vegetarian',
+  'Bakery',
+  'Cafe',
+  'Dessert',
+  'Other',
+] as const;
+
+export type Cuisine = typeof CUISINES[number];
