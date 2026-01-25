@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#F9F8F4"/>
+  <circle cx="256" cy="200" r="80" fill="#E8A838"/>
+  <path d="M100 350 Q256 280 412 350 L412 450 Q256 380 100 450 Z" fill="#4A7C59"/>
+  <text x="256" y="480" text-anchor="middle" font-family="serif" font-size="48" fill="#2D3436">Horizon</text>
+</svg>
