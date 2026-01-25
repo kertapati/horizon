@@ -182,42 +182,46 @@ export function BucketListOptimized() {
         return;
       }
 
+      // Build the insert object with only core fields first
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const insertData: Record<string, any> = {
+        title: data.title,
+        description: data.description,
+        categories: data.categories,
+        status: data.status,
+        location_type: data.location_type,
+        specific_location: data.specific_location,
+        region: data.region,
+        target_year: data.target_year,
+        ownership: data.ownership,
+        is_priority: data.is_priority,
+        added_by: user.id,
+        is_physical: true,
+        actionability: null,
+        target_timeframe: null,
+        seasonality: [],
+        season_notes: null,
+        completed_date: null,
+        completion_notes: null,
+        related_item_ids: [],
+      };
+
+      // Add optional fields if they have values (these may not exist in all DB versions)
+      if (data.country) insertData.country = data.country;
+      if (data.gastronomy_type) insertData.gastronomy_type = data.gastronomy_type;
+      if (data.cuisine) insertData.cuisine = data.cuisine;
+      if (data.neighborhood) insertData.neighborhood = data.neighborhood;
+      if (data.price_level) insertData.price_level = data.price_level;
+      if (data.difficulty) insertData.difficulty = data.difficulty;
+      if (data.notes) insertData.notes = data.notes;
+
       const { error } = await supabase
         .from('bucket_list_items')
-        .insert({
-          title: data.title,
-          description: data.description,
-          categories: data.categories,
-          status: data.status,
-          location_type: data.location_type,
-          specific_location: data.specific_location,
-          region: data.region,
-          country: data.country,
-          target_year: data.target_year,
-          ownership: data.ownership,
-          is_priority: data.is_priority,
-          added_by: user.id,
-          // Default values for other fields
-          is_physical: true,
-          actionability: null,
-          target_timeframe: null,
-          seasonality: [],
-          season_notes: null,
-          completed_date: null,
-          completion_notes: null,
-          related_item_ids: [],
-          // Gastronomy fields
-          gastronomy_type: data.gastronomy_type,
-          cuisine: data.cuisine,
-          neighborhood: data.neighborhood,
-          price_level: data.price_level,
-          difficulty: data.difficulty,
-          notes: data.notes,
-        });
+        .insert(insertData);
 
       if (error) {
         console.error('Error adding item:', error);
-        alert('Failed to add item. Please try again.');
+        alert(`Failed to add item: ${error.message}`);
       } else {
         console.log('Item added successfully');
         fetchItems(); // Refresh the list
@@ -238,27 +242,33 @@ export function BucketListOptimized() {
         return;
       }
 
+      // Build insert data with core fields
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const insertData: Record<string, any> = {
+        title: data.title,
+        categories: ['food_drink'],
+        status: 'idea',
+        location_type: 'sydney',
+        ownership: 'couples',
+        added_by: user.id,
+        is_physical: true,
+        is_priority: false,
+      };
+
+      // Add gastronomy fields if DB supports them
+      if (data.cuisine) insertData.cuisine = data.cuisine;
+      if (data.neighborhood) insertData.neighborhood = data.neighborhood;
+      if (data.price_level) insertData.price_level = data.price_level;
+      if (data.notes) insertData.notes = data.notes;
+      insertData.gastronomy_type = 'restaurant';
+
       const { error } = await supabase
         .from('bucket_list_items')
-        .insert({
-          title: data.title,
-          categories: ['food_drink'],
-          status: 'idea',
-          location_type: 'sydney',
-          ownership: 'couples',
-          added_by: user.id,
-          is_physical: true,
-          is_priority: false,
-          gastronomy_type: 'restaurant',
-          cuisine: data.cuisine,
-          neighborhood: data.neighborhood,
-          price_level: data.price_level,
-          notes: data.notes,
-        });
+        .insert(insertData);
 
       if (error) {
         console.error('Error adding restaurant:', error);
-        alert('Failed to add restaurant. Please try again.');
+        alert(`Failed to add restaurant: ${error.message}`);
       } else {
         console.log('Restaurant added successfully');
         fetchItems();
@@ -279,25 +289,31 @@ export function BucketListOptimized() {
         return;
       }
 
+      // Build insert data with core fields
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const insertData: Record<string, any> = {
+        title: data.title,
+        categories: ['food_drink'],
+        status: 'idea',
+        ownership: 'couples',
+        added_by: user.id,
+        is_physical: false,
+        is_priority: false,
+      };
+
+      // Add gastronomy fields if DB supports them
+      if (data.cuisine) insertData.cuisine = data.cuisine;
+      if (data.difficulty) insertData.difficulty = data.difficulty;
+      if (data.notes) insertData.notes = data.notes;
+      insertData.gastronomy_type = 'dish';
+
       const { error } = await supabase
         .from('bucket_list_items')
-        .insert({
-          title: data.title,
-          categories: ['food_drink'],
-          status: 'idea',
-          ownership: 'couples',
-          added_by: user.id,
-          is_physical: false,
-          is_priority: false,
-          gastronomy_type: 'dish',
-          cuisine: data.cuisine,
-          difficulty: data.difficulty,
-          notes: data.notes,
-        });
+        .insert(insertData);
 
       if (error) {
         console.error('Error adding dish:', error);
-        alert('Failed to add dish. Please try again.');
+        alert(`Failed to add dish: ${error.message}`);
       } else {
         console.log('Dish added successfully');
         fetchItems();
