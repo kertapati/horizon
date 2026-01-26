@@ -1,22 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, lazy, Suspense } from 'react';
+import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import { BucketListItem, Region, Profile, Category } from '@/types/database';
 import { CompactListItem } from './compact-list-item';
-import { TableView } from './table-view';
-import { ItemCard } from './item-card';
 import { SidebarNav } from './sidebar-nav';
 import { CompactHeader } from './compact-header';
-import { DetailPanel } from './detail-panel';
-import { TravelView } from './travel-view';
-import { LifeView } from './life-view';
-import { CategoryView } from './category-view';
-import { AddItemModal, NewItemData } from './add-item-modal';
-import { GroupedByCategoryView } from './grouped-by-category-view';
-import { RestaurantsView } from './restaurants-view';
-import { KitchenView } from './kitchen-view';
-import { YearManifesto } from './year-manifesto';
+import {
+  FullPageSkeleton,
+  CardGridSkeleton,
+  TableSkeleton,
+  CompactListSkeleton,
+  GastronomyViewSkeleton,
+} from './skeletons';
 import {
   getTravelStats,
   getYearStats,
@@ -24,6 +21,55 @@ import {
   getInsights
 } from '@/lib/bucket-list-stats';
 import { categoryConfig } from '@/lib/category-config';
+
+// Dynamic imports for heavy components (code splitting)
+// These are only loaded when needed, reducing initial bundle size
+const DetailPanel = dynamic(() => import('./detail-panel').then(mod => ({ default: mod.DetailPanel })), {
+  ssr: false,
+});
+
+const AddItemModal = dynamic(() => import('./add-item-modal').then(mod => ({ default: mod.AddItemModal })), {
+  ssr: false,
+});
+
+const TableView = dynamic(() => import('./table-view').then(mod => ({ default: mod.TableView })), {
+  loading: () => <TableSkeleton />,
+});
+
+const ItemCard = dynamic(() => import('./item-card').then(mod => ({ default: mod.ItemCard })), {
+  ssr: false,
+});
+
+const TravelView = dynamic(() => import('./travel-view').then(mod => ({ default: mod.TravelView })), {
+  loading: () => <CardGridSkeleton count={9} />,
+});
+
+const LifeView = dynamic(() => import('./life-view').then(mod => ({ default: mod.LifeView })), {
+  loading: () => <CardGridSkeleton count={9} />,
+});
+
+const CategoryView = dynamic(() => import('./category-view').then(mod => ({ default: mod.CategoryView })), {
+  loading: () => <CardGridSkeleton count={9} />,
+});
+
+const GroupedByCategoryView = dynamic(() => import('./grouped-by-category-view').then(mod => ({ default: mod.GroupedByCategoryView })), {
+  loading: () => <CardGridSkeleton count={9} />,
+});
+
+const RestaurantsView = dynamic(() => import('./restaurants-view').then(mod => ({ default: mod.RestaurantsView })), {
+  loading: () => <GastronomyViewSkeleton />,
+});
+
+const KitchenView = dynamic(() => import('./kitchen-view').then(mod => ({ default: mod.KitchenView })), {
+  loading: () => <GastronomyViewSkeleton />,
+});
+
+const YearManifesto = dynamic(() => import('./year-manifesto').then(mod => ({ default: mod.YearManifesto })), {
+  ssr: false,
+});
+
+// Re-export NewItemData type for use in handleAddItemSubmit
+import type { NewItemData } from './add-item-modal';
 
 type ViewMode = 'all' | 'category' | 'travel' | 'life' | 'year' | 'ownership' | 'restaurants' | 'kitchen' | 'in_progress' | 'completed';
 type Density = 'compact' | 'comfortable' | 'table';
@@ -89,11 +135,7 @@ export function BucketListOptimized() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-gray-500">Loading your horizon...</div>
-      </div>
-    );
+    return <FullPageSkeleton />;
   }
 
   const insights = getInsights(items);
