@@ -157,29 +157,38 @@ export function BucketListOptimized() {
 
   // View-specific filters
   if (viewMode === 'completed') {
-    // Completed view shows only completed items
-    filteredItems = filteredItems.filter(i => i.status === 'completed');
+    // Completed view shows only completed items, excluding food_drink
+    filteredItems = filteredItems.filter(i =>
+      i.status === 'completed' &&
+      !i.categories.includes('food_drink')
+    );
     if (selectedCategoryCompleted) {
       filteredItems = filteredItems.filter(i => i.categories.includes(selectedCategoryCompleted));
     }
   } else if (viewMode === 'in_progress') {
-    // In Progress view shows only in_progress items
-    filteredItems = filteredItems.filter(i => i.status === 'in_progress');
+    // In Progress view shows only in_progress items, excluding food_drink
+    filteredItems = filteredItems.filter(i =>
+      i.status === 'in_progress' &&
+      !i.categories.includes('food_drink')
+    );
     if (selectedCategoryInProgress) {
       filteredItems = filteredItems.filter(i => i.categories.includes(selectedCategoryInProgress));
     }
   } else {
-    // All other views exclude only completed items (in_progress items should still show)
-    filteredItems = filteredItems.filter(i => i.status !== 'completed');
+    // All other views exclude completed items and food_drink items
+    filteredItems = filteredItems.filter(i =>
+      i.status !== 'completed' &&
+      !i.categories.includes('food_drink')
+    );
 
     if (viewMode === 'all' && selectedCategory) {
       // Overview with category filter
       filteredItems = filteredItems.filter(i => i.categories.includes(selectedCategory));
     } else if (viewMode === 'travel') {
-      // Travel view shows all travel items
+      // Travel view shows all travel items (excluding food_drink already filtered above)
       filteredItems = filteredItems.filter(i => i.categories.includes('travel'));
     } else if (viewMode === 'life') {
-      // Life view shows all non-travel items
+      // Life view shows all non-travel items (excluding food_drink already filtered above)
       filteredItems = filteredItems.filter(i => !i.categories.includes('travel'));
     } else if (viewMode === 'year') {
       filteredItems = selectedYear ? yearStats[selectedYear] : yearStats.unassigned;

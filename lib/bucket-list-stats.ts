@@ -96,19 +96,23 @@ export function getTravelStats(items: BucketListItem[]): TravelStats {
 }
 
 export function getYearStats(items: BucketListItem[]): YearStats {
+  // Exclude food_drink items from year stats
+  const filteredItems = items.filter(i => !i.categories.includes('food_drink'));
   return {
-    2026: items.filter(i => i.target_year === 2026),
-    2027: items.filter(i => i.target_year === 2027),
-    2028: items.filter(i => i.target_year === 2028),
-    unassigned: items.filter(i => !i.target_year),
+    2026: filteredItems.filter(i => i.target_year === 2026),
+    2027: filteredItems.filter(i => i.target_year === 2027),
+    2028: filteredItems.filter(i => i.target_year === 2028),
+    unassigned: filteredItems.filter(i => !i.target_year),
   };
 }
 
 export function getOwnershipStats(items: BucketListItem[]): OwnershipStats {
+  // Exclude food_drink items from ownership stats
+  const filteredItems = items.filter(i => !i.categories.includes('food_drink'));
   return {
-    couples: items.filter(i => i.ownership === 'couples'),
-    peter: items.filter(i => i.ownership === 'peter'),
-    xi: items.filter(i => i.ownership === 'wife'),
+    couples: filteredItems.filter(i => i.ownership === 'couples'),
+    peter: filteredItems.filter(i => i.ownership === 'peter'),
+    xi: filteredItems.filter(i => i.ownership === 'wife'),
   };
 }
 

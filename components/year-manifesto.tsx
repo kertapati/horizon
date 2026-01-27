@@ -36,14 +36,16 @@ export function YearManifesto({ year }: YearManifestoProps) {
           .eq('year', year)
           .single();
 
-        if (error && error.code !== 'PGRST116') {
+        if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
           // PGRST116 = no rows returned (expected if no note exists yet)
-          console.error('Error fetching year note:', error);
+          // 42P01 = table doesn't exist (silently ignore)
+          console.error('Error fetching year note:', error.message || error);
         }
 
         setContent(data?.content || '');
       } catch (err) {
-        console.error('Unexpected error:', err);
+        // Silently ignore if table doesn't exist
+        console.debug('Year notes not available:', err);
       } finally {
         setIsLoading(false);
       }
@@ -79,14 +81,16 @@ export function YearManifesto({ year }: YearManifestoProps) {
           }
         );
 
-      if (error) {
+      if (error && error.code !== '42P01') {
+        // 42P01 = table doesn't exist, silently ignore
         console.error('Error saving year note:', error);
-      } else {
+      } else if (!error) {
         setShowSaved(true);
         setTimeout(() => setShowSaved(false), 2000);
       }
     } catch (err) {
-      console.error('Unexpected error saving:', err);
+      // Silently ignore if table doesn't exist
+      console.debug('Year notes save not available:', err);
     } finally {
       setIsSaving(false);
     }

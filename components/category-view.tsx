@@ -31,11 +31,14 @@ export function CategoryView({ items, onItemClick, density }: CategoryViewProps)
     return () => document.removeEventListener('keydown', handleEscape);
   }, [expandedCategory]);
 
-  // Group items by category
+  // Group items by category (excluding food_drink - that's for Restaurants section only)
   const categoryGroups = new Map<Category, BucketListItem[]>();
 
   items.forEach(item => {
     item.categories.forEach(cat => {
+      // Skip food_drink category - it should only appear in Restaurants section
+      if (cat === 'food_drink') return;
+
       if (!categoryGroups.has(cat)) {
         categoryGroups.set(cat, []);
       }

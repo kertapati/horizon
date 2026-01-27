@@ -12,7 +12,7 @@ interface CategoryGroup {
   items: BucketListItem[];
 }
 
-// Life categories (non-travel categories)
+// Life categories (non-travel categories, excluding food_drink which is for Restaurants section only)
 const lifeCategories: Category[] = [
   'creative',
   'skills',
@@ -26,7 +26,6 @@ const lifeCategories: Category[] = [
   'cultural_events',
   'sporting_events',
   'music_party',
-  'food_drink',
   'challenges'
 ];
 
