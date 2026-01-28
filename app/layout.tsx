@@ -24,8 +24,7 @@ export const metadata: Metadata = {
       { url: '/icons/icon.svg', type: 'image/svg+xml' },
     ],
     apple: [
-      { url: '/apple-icon.png' },
-      { url: '/icons/apple-icon.png', sizes: '180x180' },
+      { url: '/apple-icon.png', sizes: '180x180' },
     ],
   },
   appleWebApp: {
@@ -59,9 +58,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Horizon" />
-        <link rel="apple-touch-icon" href="/apple-icon.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-icon.png" />
-        <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
+        <link rel="apple-touch-icon" href="/apple-icon.png" sizes="180x180" />
+        <link rel="apple-touch-icon" href="/icons/icon-192.png" sizes="192x192" />
       </head>
       <body
         className={`${merriweather.variable} ${nunito.variable} antialiased`}
