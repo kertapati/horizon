@@ -64,11 +64,14 @@ function getRegionForRestaurant(item: BucketListItem): string {
   return 'other';
 }
 
+type SortMode = 'alphabetical' | 'recent';
+
 export function RestaurantsView({ items, onItemUpdate, onRefresh, onItemClick }: RestaurantsViewProps) {
   const [showCompleted, setShowCompleted] = useState(false);
   const [quickInput, setQuickInput] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [optimisticItems, setOptimisticItems] = useState<Record<string, Partial<BucketListItem>>>({});
+  const [sortMode, setSortMode] = useState<SortMode>('alphabetical');
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Filter for restaurants (Food & Drink with gastronomy_type = 'restaurant' or null)
@@ -102,9 +105,19 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh, onItemClick }:
     return acc;
   }, {} as Record<string, BucketListItem[]>);
 
-  // Sort items within each group alphabetically
+  // Sort items within each group based on sort mode
   Object.values(groupedByRegion).forEach(items => {
-    items.sort((a, b) => a.title.localeCompare(b.title));
+    if (sortMode === 'recent') {
+      // Sort by created_at descending (newest first)
+      items.sort((a, b) => {
+        const dateA = new Date(a.created_at).getTime();
+        const dateB = new Date(b.created_at).getTime();
+        return dateB - dateA;
+      });
+    } else {
+      // Sort alphabetically
+      items.sort((a, b) => a.title.localeCompare(b.title));
+    }
   });
 
   // Get ordered regions (by count, descending)
@@ -274,7 +287,7 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh, onItemClick }:
         </div>
       </div>
 
-      {/* Toggle: To Visit / Been There */}
+      {/* Toggle: To Visit / Been There + Sort */}
       <div className="px-4 py-3 border-b" style={{ borderColor: 'rgba(139, 123, 114, 0.1)' }}>
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div
@@ -304,9 +317,37 @@ export function RestaurantsView({ items, onItemUpdate, onRefresh, onItemClick }:
               ✓ Been There ({completedItems.length})
             </button>
           </div>
-          <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-            {restaurantItems.length} total
-          </span>
+          <div className="flex items-center gap-3">
+            {/* Sort Toggle */}
+            <button
+              onClick={() => setSortMode(sortMode === 'alphabetical' ? 'recent' : 'alphabetical')}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:bg-stone-100"
+              style={{
+                background: 'rgba(139, 123, 114, 0.08)',
+                color: 'var(--text-muted)',
+              }}
+              title={sortMode === 'alphabetical' ? 'Sorted A-Z' : 'Sorted by recently added'}
+            >
+              {sortMode === 'alphabetical' ? (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                  <span>A-Z</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>Recent</span>
+                </>
+              )}
+            </button>
+            <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
+              {restaurantItems.length} total
+            </span>
+          </div>
         </div>
       </div>
 
