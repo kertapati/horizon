@@ -72,6 +72,9 @@ export interface BucketListItem {
   updated_at: string;
   is_priority: boolean;
   related_item_ids: string[];
+  // Archive fields
+  archived: boolean;
+  archived_at: string | null;
   // Gastronomy Module fields
   gastronomy_type: GastronomyType | null;
   cuisine: string | null;
@@ -98,6 +101,9 @@ export interface CreateBucketListItem {
   status?: Status;
   ownership?: Ownership;
   is_priority?: boolean;
+  // Archive fields
+  archived?: boolean;
+  archived_at?: string | null;
   // Gastronomy Module fields
   gastronomy_type?: GastronomyType | null;
   cuisine?: string | null;

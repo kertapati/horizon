@@ -17,15 +17,16 @@ export function ItemDetail({ item: initialItem }: ItemDetailProps) {
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const router = useRouter();
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this item?')) return;
-
+  const handleArchive = async () => {
     setIsDeleting(true);
     const supabase = createClient();
-    const { error } = await supabase.from('bucket_list_items').delete().eq('id', item.id);
+    const { error } = await supabase
+      .from('bucket_list_items')
+      .update({ archived: true, archived_at: new Date().toISOString() })
+      .eq('id', item.id);
 
     if (error) {
-      console.error('Error deleting item:', error);
+      console.error('Error archiving item:', error);
       setIsDeleting(false);
       return;
     }
@@ -95,11 +96,11 @@ export function ItemDetail({ item: initialItem }: ItemDetailProps) {
                 Edit
               </button>
               <button
-                onClick={handleDelete}
+                onClick={handleArchive}
                 disabled={isDeleting}
                 className="rounded-lg px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-50"
               >
-                Delete
+                Archive
               </button>
             </div>
           </div>

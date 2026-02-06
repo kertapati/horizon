@@ -60,6 +60,8 @@ export const localBucketListData: BucketListItem[] = [
     price_level: null,
     difficulty: null,
     notes: null,
+    archived: false,
+    archived_at: null,
   },
   {
     id: 'local-2',
@@ -91,6 +93,8 @@ export const localBucketListData: BucketListItem[] = [
     price_level: null,
     difficulty: null,
     notes: null,
+    archived: false,
+    archived_at: null,
   },
   {
     id: 'local-3',
@@ -122,6 +126,8 @@ export const localBucketListData: BucketListItem[] = [
     price_level: null,
     difficulty: null,
     notes: null,
+    archived: false,
+    archived_at: null,
   },
   {
     id: 'local-4',
@@ -153,6 +159,8 @@ export const localBucketListData: BucketListItem[] = [
     price_level: null,
     difficulty: null,
     notes: null,
+    archived: false,
+    archived_at: null,
   },
   {
     id: 'local-5',
@@ -184,6 +192,8 @@ export const localBucketListData: BucketListItem[] = [
     price_level: null,
     difficulty: null,
     notes: null,
+    archived: false,
+    archived_at: null,
   },
   // ============================================================================
   // PRIORITY ITEMS
@@ -218,6 +228,8 @@ export const localBucketListData: BucketListItem[] = [
     price_level: null,
     difficulty: null,
     notes: null,
+    archived: false,
+    archived_at: null,
   },
   {
     id: 'local-7',
@@ -249,6 +261,8 @@ export const localBucketListData: BucketListItem[] = [
     price_level: null,
     difficulty: null,
     notes: null,
+    archived: false,
+    archived_at: null,
   },
   {
     id: 'local-8',
@@ -280,6 +294,8 @@ export const localBucketListData: BucketListItem[] = [
     price_level: null,
     difficulty: null,
     notes: null,
+    archived: false,
+    archived_at: null,
   },
   // ============================================================================
   // TRAVEL ITEMS
@@ -314,6 +330,8 @@ export const localBucketListData: BucketListItem[] = [
     price_level: null,
     difficulty: null,
     notes: null,
+    archived: false,
+    archived_at: null,
   },
   {
     id: 'local-10',
@@ -345,6 +363,8 @@ export const localBucketListData: BucketListItem[] = [
     price_level: null,
     difficulty: null,
     notes: null,
+    archived: false,
+    archived_at: null,
   },
 ];
 

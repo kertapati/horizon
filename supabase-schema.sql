@@ -58,6 +58,9 @@ CREATE TABLE IF NOT EXISTS bucket_list_items (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::TEXT, NOW()) NOT NULL,
   is_priority BOOLEAN DEFAULT false,
   related_item_ids UUID[] DEFAULT '{}',
+  -- Archive fields
+  archived BOOLEAN DEFAULT false,
+  archived_at TIMESTAMP WITH TIME ZONE,
   -- Gastronomy Module fields
   gastronomy_type TEXT CHECK (gastronomy_type IN ('restaurant', 'dish', NULL)),
   cuisine TEXT,
@@ -172,3 +175,22 @@ CREATE TRIGGER update_year_notes_updated_at
   BEFORE UPDATE ON year_notes
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Migration: Add archive fields to existing bucket_list_items table
+-- Safe to re-run: uses IF NOT EXISTS / column existence checks
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bucket_list_items' AND column_name = 'archived'
+  ) THEN
+    ALTER TABLE bucket_list_items ADD COLUMN archived BOOLEAN DEFAULT false;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'bucket_list_items' AND column_name = 'archived_at'
+  ) THEN
+    ALTER TABLE bucket_list_items ADD COLUMN archived_at TIMESTAMP WITH TIME ZONE;
+  END IF;
+END $$;

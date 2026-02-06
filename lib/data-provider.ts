@@ -140,8 +140,62 @@ export async function updateBucketListItem(
 }
 
 /**
- * Delete a bucket list item
- * Only works when Supabase is enabled
+ * Archive a bucket list item (soft delete)
+ * Sets archived=true and archived_at=now
+ */
+export async function archiveBucketListItem(id: string): Promise<{
+  success: boolean;
+  error: Error | null;
+}> {
+  if (!useSupabase()) {
+    return {
+      success: false,
+      error: new Error('Cannot archive items in local mode. Enable Supabase first.'),
+    };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('bucket_list_items')
+    .update({ archived: true, archived_at: new Date().toISOString() })
+    .eq('id', id);
+
+  return {
+    success: !error,
+    error: error ? new Error(error.message) : null,
+  };
+}
+
+/**
+ * Restore an archived bucket list item
+ * Sets archived=false and archived_at=null
+ */
+export async function restoreBucketListItem(id: string): Promise<{
+  success: boolean;
+  error: Error | null;
+}> {
+  if (!useSupabase()) {
+    return {
+      success: false,
+      error: new Error('Cannot restore items in local mode. Enable Supabase first.'),
+    };
+  }
+
+  const supabase = createClient();
+  const { error } = await supabase
+    .from('bucket_list_items')
+    .update({ archived: false, archived_at: null })
+    .eq('id', id);
+
+  return {
+    success: !error,
+    error: error ? new Error(error.message) : null,
+  };
+}
+
+/**
+ * Permanently delete a bucket list item (hard delete)
+ * Only intended for use from the Archive section
  */
 export async function deleteBucketListItem(id: string): Promise<{
   success: boolean;

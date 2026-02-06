@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { Profile } from '@/types/database';
 
-type ViewMode = 'all' | 'category' | 'travel' | 'life' | 'year' | 'ownership' | 'restaurants' | 'kitchen' | 'in_progress' | 'completed';
+type ViewMode = 'all' | 'category' | 'travel' | 'life' | 'year' | 'ownership' | 'restaurants' | 'kitchen' | 'in_progress' | 'completed' | 'archive';
 
 interface SidebarNavProps {
   currentView: ViewMode;
@@ -140,6 +140,14 @@ export function SidebarNav({ currentView, onViewChange, onRegionSelect, profile 
             active={currentView === 'completed'}
             collapsed={collapsed}
             onClick={() => onViewChange('completed')}
+          />
+
+          <NavItem
+            icon="📦"
+            label="Archive"
+            active={currentView === 'archive'}
+            collapsed={collapsed}
+            onClick={() => onViewChange('archive')}
           />
         </nav>
 

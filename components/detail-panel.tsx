@@ -11,9 +11,10 @@ interface DetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdate?: () => void;
+  onToast?: (message: string, undo?: () => void) => void;
 }
 
-export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProps) {
+export function DetailPanel({ item, isOpen, onClose, onUpdate, onToast }: DetailPanelProps) {
   const [editedItem, setEditedItem] = useState<BucketListItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Category[]>([]);
@@ -126,25 +127,55 @@ export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProp
     }
   };
 
-  const handleDelete = async () => {
+  const handleArchive = async () => {
     if (!editedItem) return;
-
-    if (!confirm('Are you sure you want to delete this item?')) return;
 
     try {
       const supabase = createClient();
       const { error } = await supabase
         .from('bucket_list_items')
-        .delete()
+        .update({ archived: true, archived_at: new Date().toISOString() })
         .eq('id', editedItem.id);
 
       if (error) throw error;
 
       if (onUpdate) onUpdate();
       onClose();
+      if (onToast) {
+        const itemId = editedItem.id;
+        onToast('Archived', async () => {
+          // Undo: restore the item
+          const { error: undoError } = await supabase
+            .from('bucket_list_items')
+            .update({ archived: false, archived_at: null })
+            .eq('id', itemId);
+          if (!undoError && onUpdate) onUpdate();
+        });
+      }
     } catch (error) {
-      console.error('Error deleting item:', error);
-      alert('Failed to delete item. Please try again.');
+      console.error('Error archiving item:', error);
+      alert('Failed to archive item. Please try again.');
+    }
+  };
+
+  const handleRestore = async () => {
+    if (!editedItem) return;
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('bucket_list_items')
+        .update({ archived: false, archived_at: null })
+        .eq('id', editedItem.id);
+
+      if (error) throw error;
+
+      if (onUpdate) onUpdate();
+      onClose();
+      if (onToast) onToast('Restored');
+    } catch (error) {
+      console.error('Error restoring item:', error);
+      alert('Failed to restore item. Please try again.');
     }
   };
 
@@ -629,12 +660,21 @@ export function DetailPanel({ item, isOpen, onClose, onUpdate }: DetailPanelProp
 
         {/* Footer */}
         <div className="flex h-14 flex-shrink-0 items-center justify-between border-t border-gray-200 bg-white px-4 sm:px-6">
-          <button
-            onClick={handleDelete}
-            className="text-sm font-medium text-red-600 hover:text-red-700"
-          >
-            Delete
-          </button>
+          {editedItem.archived ? (
+            <button
+              onClick={handleRestore}
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-700"
+            >
+              Restore
+            </button>
+          ) : (
+            <button
+              onClick={handleArchive}
+              className="text-sm font-medium text-red-600 hover:text-red-700"
+            >
+              Archive
+            </button>
+          )}
           <button
             onClick={handleSave}
             disabled={isSaving}

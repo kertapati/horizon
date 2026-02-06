@@ -47,6 +47,7 @@ export interface Insights {
 }
 
 export function getCategoryStats(items: BucketListItem[]): Record<Category, CategoryStats> {
+  items = items.filter(i => !i.archived);
   const stats = {} as Record<Category, CategoryStats>;
 
   // Initialize all categories
@@ -78,7 +79,7 @@ export function getCategoryStats(items: BucketListItem[]): Record<Category, Cate
 }
 
 export function getTravelStats(items: BucketListItem[]): TravelStats {
-  const travelItems = items.filter(i => i.categories.includes('travel'));
+  const travelItems = items.filter(i => !i.archived && i.categories.includes('travel'));
 
   return {
     total: travelItems.length,
@@ -96,8 +97,8 @@ export function getTravelStats(items: BucketListItem[]): TravelStats {
 }
 
 export function getYearStats(items: BucketListItem[]): YearStats {
-  // Exclude food_drink items from year stats
-  const filteredItems = items.filter(i => !i.categories.includes('food_drink'));
+  // Exclude food_drink and archived items from year stats
+  const filteredItems = items.filter(i => !i.archived && !i.categories.includes('food_drink'));
   return {
     2026: filteredItems.filter(i => i.target_year === 2026),
     2027: filteredItems.filter(i => i.target_year === 2027),
@@ -107,8 +108,8 @@ export function getYearStats(items: BucketListItem[]): YearStats {
 }
 
 export function getOwnershipStats(items: BucketListItem[]): OwnershipStats {
-  // Exclude food_drink items from ownership stats
-  const filteredItems = items.filter(i => !i.categories.includes('food_drink'));
+  // Exclude food_drink and archived items from ownership stats
+  const filteredItems = items.filter(i => !i.archived && !i.categories.includes('food_drink'));
   return {
     couples: filteredItems.filter(i => i.ownership === 'couples'),
     peter: filteredItems.filter(i => i.ownership === 'peter'),
@@ -117,6 +118,7 @@ export function getOwnershipStats(items: BucketListItem[]): OwnershipStats {
 }
 
 export function getInsights(items: BucketListItem[]): Insights {
+  items = items.filter(i => !i.archived);
   const completed = items.filter(i => i.status === 'completed');
 
   return {
@@ -139,7 +141,8 @@ export function getInsights(items: BucketListItem[]): Insights {
   };
 }
 
-export function groupItemsByCategory(items: BucketListItem[]): Map<Category, BucketListItem[]> {
+export function groupItemsByCategory(items: BucketListItem[], includeArchived = false): Map<Category, BucketListItem[]> {
+  if (!includeArchived) items = items.filter(i => !i.archived);
   const grouped = new Map<Category, BucketListItem[]>();
 
   for (const item of items) {

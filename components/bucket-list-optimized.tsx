@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, lazy, Suspense } from 'react';
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { createClient } from '@/lib/supabase/client';
 import { BucketListItem, Region, Profile, Category } from '@/types/database';
@@ -68,10 +68,16 @@ const YearManifesto = dynamic(() => import('./year-manifesto').then(mod => ({ de
   ssr: false,
 });
 
+const ArchiveView = dynamic(() => import('./archive-view').then(mod => ({ default: mod.ArchiveView })), {
+  loading: () => <CardGridSkeleton count={9} />,
+});
+
+import { Toast } from './toast';
+
 // Re-export NewItemData type for use in handleAddItemSubmit
 import type { NewItemData } from './add-item-modal';
 
-type ViewMode = 'all' | 'category' | 'travel' | 'life' | 'year' | 'ownership' | 'restaurants' | 'kitchen' | 'in_progress' | 'completed';
+type ViewMode = 'all' | 'category' | 'travel' | 'life' | 'year' | 'ownership' | 'restaurants' | 'kitchen' | 'in_progress' | 'completed' | 'archive';
 type Density = 'compact' | 'comfortable' | 'table';
 
 export function BucketListOptimized() {
@@ -93,6 +99,13 @@ export function BucketListOptimized() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [selectedCategoryInProgress, setSelectedCategoryInProgress] = useState<Category | null>(null);
   const [selectedCategoryCompleted, setSelectedCategoryCompleted] = useState<Category | null>(null);
+  const [selectedCategoryArchive, setSelectedCategoryArchive] = useState<Category | null>(null);
+
+  // Toast state
+  const [toast, setToast] = useState<{ message: string; onUndo?: () => void } | null>(null);
+  const showToast = useCallback((message: string, onUndo?: () => void) => {
+    setToast({ message, onUndo });
+  }, []);
 
   useEffect(() => {
     fetchItems();
@@ -146,6 +159,13 @@ export function BucketListOptimized() {
   // Filter items based on view and search
   let filteredItems = items;
 
+  // Archive view shows only archived items; all other views exclude archived items
+  if (viewMode === 'archive') {
+    filteredItems = filteredItems.filter(i => i.archived);
+  } else {
+    filteredItems = filteredItems.filter(i => !i.archived);
+  }
+
   // Search filter
   if (searchQuery) {
     filteredItems = filteredItems.filter(item =>
@@ -156,7 +176,12 @@ export function BucketListOptimized() {
   }
 
   // View-specific filters
-  if (viewMode === 'completed') {
+  if (viewMode === 'archive') {
+    // Archive view: already filtered above, apply category filter if set
+    if (selectedCategoryArchive) {
+      filteredItems = filteredItems.filter(i => i.categories.includes(selectedCategoryArchive));
+    }
+  } else if (viewMode === 'completed') {
     // Completed view shows only completed items, excluding food_drink
     filteredItems = filteredItems.filter(i =>
       i.status === 'completed' &&
@@ -209,6 +234,7 @@ export function BucketListOptimized() {
       case 'kitchen': return 'Kitchen';
       case 'in_progress': return 'In Progress';
       case 'completed': return 'Completed';
+      case 'archive': return 'Archive';
       default: return 'Horizon';
     }
   };
@@ -314,8 +340,8 @@ export function BucketListOptimized() {
           onDensityChange={setDensity}
           onSearch={setSearchQuery}
           onAdd={handleAddItem}
-          hideAddButton={viewMode === 'restaurants' || viewMode === 'kitchen'}
-          hideDensityToggle={viewMode === 'restaurants' || viewMode === 'kitchen'}
+          hideAddButton={viewMode === 'restaurants' || viewMode === 'kitchen' || viewMode === 'archive'}
+          hideDensityToggle={viewMode === 'restaurants' || viewMode === 'kitchen' || viewMode === 'archive'}
         />
 
         {/* Content Area */}
@@ -484,6 +510,15 @@ export function BucketListOptimized() {
                 selectedCategory={selectedCategoryCompleted}
                 onCategorySelect={setSelectedCategoryCompleted}
               />
+            ) : viewMode === 'archive' ? (
+              <ArchiveView
+                items={filteredItems}
+                onItemClick={handleItemClick}
+                density={density}
+                selectedCategory={selectedCategoryArchive}
+                onCategorySelect={setSelectedCategoryArchive}
+                onRefresh={fetchItems}
+              />
             ) : filteredItems.length === 0 ? (
               <div className="flex items-center justify-center py-12 text-gray-500">
                 No items found
@@ -518,6 +553,7 @@ export function BucketListOptimized() {
         isOpen={selectedItem !== null}
         onClose={() => setSelectedItem(null)}
         onUpdate={fetchItems}
+        onToast={showToast}
       />
 
       {/* Add Item Modal */}
@@ -526,6 +562,15 @@ export function BucketListOptimized() {
         onClose={() => setShowAddModal(false)}
         onAdd={handleAddItemSubmit}
       />
+
+      {/* Toast */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          onUndo={toast.onUndo}
+          onDismiss={() => setToast(null)}
+        />
+      )}
     </div>
   );
 }
